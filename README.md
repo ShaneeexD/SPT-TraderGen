@@ -13,8 +13,8 @@ TraderGen has two parts:
 
 ### For Players (Installing a Trader Pack)
 
-1. Install TraderGen into your SPT `user/mods/` folder
-2. Place the trader pack folder into `user/mods/TraderGen/traders/`
+1. Install the TraderGen mod (Drag the `SPT` folder into your SPT main directory)
+2. Place the trader pack folder into `user/mods/TraderGen/traders/`, it may also be pre-packaged so you can simply drag the `SPT` folder into the main directory, as done with the TraderGen mod
 3. Start the SPT server — the trader appears automatically
 
 ### For Creators (Making a Trader Pack)
@@ -37,15 +37,8 @@ SPT/
                 └── MyTraderPack/
                     ├── trader.json    # Trader definition
                     └── assets/
-                        └── avatar.jpg # 332x332 trader image
+                        └── avatar.jpg # Trader image
 ```
-
-### Building from Source
-
-1. Open `SPT-Mod-Template.sln` in Visual Studio or Rider
-2. Run `dotnet restore` to fetch NuGet packages
-3. Build the solution
-4. Copy `Server/Build/SPT/user/mods/TraderGen/` to your SPT installation
 
 ## Trader Pack Structure
 
@@ -55,7 +48,7 @@ A trader pack is a folder containing:
 MyTraderPack/
 ├── trader.json        # Required: trader definition
 └── assets/
-    └── avatar.jpg     # Optional: 332x332 trader portrait
+    └── avatar.jpg     # Optional: square trader portrait
 ```
 
 ## JSON Schema
@@ -168,8 +161,8 @@ MyTraderPack/
 
 When publishing your trader pack for others to use:
 
-1. **State the dependency**: Your mod requires `tradergen.framework` v1.0.0+
-2. **Include clear instructions**: Tell users to place the pack folder in `user/mods/TraderGen/traders/`
+1. **State the dependency**: Your mod requires `com.serenity.tradergen` v1.0.0+
+2. **Include clear instructions**: Tell users to place the pack folder in `user/mods/TraderGen/traders/` or pre-package it as `SPT\user\mods\TraderGen\traders\YourTraderPack` - if you do the second option, make sure not to include the TraderGen DLL or any other mod authors packs.
 3. **Include the avatar image**: Make sure `assets/avatar.jpg` is in the pack
 4. **Test thoroughly**: Start SPT and verify the trader appears with correct items and prices
 
@@ -184,6 +177,21 @@ YourTraderPack.zip
 ```
 
 Users extract `YourTraderName/` into `user/mods/TraderGen/traders/`.
+
+OR
+
+```
+SPT/
+└── user/
+    └── mods/
+        └── TraderGen/
+            └── traders/               
+                └── MyTraderPack/      # Your Trader Pack
+                    ├── trader.json    # Trader definition
+                    └── assets/
+                        └── avatar.jpg # Trader image
+```
+Users extract `SPT/` into the main SPT install directory.
 
 ## Validation & Error Handling
 
