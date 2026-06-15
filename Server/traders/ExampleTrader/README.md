@@ -4,9 +4,9 @@ This is an example trader pack for the TraderGen framework.
 
 ## Setup
 
-1. Place a square `.jpg` image at `assets/avatar.jpg`
-2. Edit `trader.json` to customize the trader
-3. The TraderGen mod will automatically load this trader on server startup
+1. Edit `trader.json` to customize the trader
+2. Enable the trader in the json, it's the first line `"enabled": true,`
+2. The TraderGen mod will automatically load this trader on server startup
 
 ## Notes
 

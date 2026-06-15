@@ -5,6 +5,9 @@
   // Place this folder in: user/mods/TraderGen/traders/
   // ============================================================
 
+  // Enable/Disable the Trader
+  "enabled": false,
+
   // Unique 24-character hex ID. Generate one at: https://www.uuidtools.com/generate/v4
   // or use the TraderGen Tool to auto-generate one.
   "id": "aabbccdd11223344eeff5566",
