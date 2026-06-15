@@ -1,0 +1,221 @@
+{
+  // ============================================================
+  // EXAMPLE QUEST PACK — Quests for "Viktor the Collector"
+  // Place this file alongside trader.json in a trader pack folder.
+  // TraderGen will auto-translate these into real BSG quest objects.
+  // ============================================================
+  //
+  // SUPPORTED OBJECTIVE TYPES:
+  //   - handover_item       Hand in X items (not found-in-raid)
+  //   - handover_fir_item   Hand in X items (must be found in raid)
+  //   - kill_enemy          Kill X enemies (optionally on a specific map)
+  //   - survive_location    Survive and extract from a specific map
+  //   - extract_location    Extract from a specific map (same as survive)
+  //
+  // ENEMY TARGETS (for kill_enemy):
+  //   Savage (Scav), AnyPmc, Any, exUsec (Rogue), pmcBot (Raider),
+  //   sectantPriest, sectantWarrior, bossBully (Reshala), bossKilla,
+  //   bossKojaniy (Shturman), bossSanitar, bossTagilla, bossGluhar,
+  //   bossZryachiy, bossBoar (Kaban), bossPartisan, bossKolontay, bossKnight
+  //
+  // MAP LOCATIONS:
+  //   bigmap (Customs), factory4_day, factory4_night, Woods, Shoreline,
+  //   Interchange, Lighthouse, Reserve, laboratory, TarkovStreets, Sandbox
+  //
+  // CURRENCIES: RUB, USD, EUR
+
+  // Default quest icon for all quests (relative to this pack folder).
+  // Individual quests can override with their own "image" field.
+  "defaultQuestIcon": "assets/default_quest_icon.png",
+
+  "storyQuests": [
+    // ---- Quest 1: Introduction quest (no prerequisites) ----
+    {
+      "id": "aabbccdd112233440000aa01",
+      "traderId": "aabbccdd11223344eeff5566",
+      "name": "First Impressions",
+      "description": "Viktor needs proof you can handle yourself. Eliminate 5 Scavs on Customs to earn his trust.",
+      "successMessage": "Not bad. You might be useful after all. Come back when you're ready for more.",
+      "startedMessage": "Show me what you're made of. Customs is crawling with Scavs — clean some up.",
+      "location": "bigmap",
+
+      "requirements": {
+        "playerLevel": 1,
+        "previousQuest": null
+      },
+
+      "objectives": [
+        {
+          "type": "kill_enemy",
+          "target": "Savage",
+          "location": "bigmap",
+          "count": 5,
+          "description": "Eliminate 5 Scavs on Customs"
+        }
+      ],
+
+      "rewards": {
+        "xp": 2500,
+        "money": { "currency": "RUB", "amount": 15000 },
+        "items": [],
+        "traderStanding": 0.02,
+        "unlockAssortItems": []
+      }
+    },
+
+    // ---- Quest 2: Chained quest (requires Quest 1 complete) ----
+    {
+      "id": "aabbccdd112233440000aa02",
+      "traderId": "aabbccdd11223344eeff5566",
+      "name": "Supply Run",
+      "description": "Viktor is building a stockpile. Find 3 AI-2 medkits in raid and bring them to him.",
+      "successMessage": "These will do nicely. I knew you had potential.",
+      "startedMessage": "I need medical supplies — AI-2 medkits, found in raid. Don't buy them from traders.",
+      "location": "any",
+
+      "requirements": {
+        "playerLevel": 2,
+        "previousQuest": "aabbccdd112233440000aa01"
+      },
+
+      "objectives": [
+        {
+          "type": "handover_fir_item",
+          "itemTpl": "5755356824597772cb798962",
+          "count": 3,
+          "description": "Hand over 3 found-in-raid AI-2 medkits"
+        }
+      ],
+
+      "rewards": {
+        "xp": 3500,
+        "money": { "currency": "RUB", "amount": 25000 },
+        "items": [],
+        "traderStanding": 0.03,
+        "unlockAssortItems": []
+      }
+    },
+
+    // ---- Quest 3: Survive a location ----
+    {
+      "id": "aabbccdd112233440000aa03",
+      "traderId": "aabbccdd11223344eeff5566",
+      "name": "Proving Grounds",
+      "description": "Viktor wants to see if you can survive Factory. Get in, and get out alive.",
+      "successMessage": "You made it out. Good. That place is a meat grinder.",
+      "startedMessage": "Factory. Survive it. That's all.",
+      "location": "factory4_day",
+
+      "requirements": {
+        "playerLevel": 3,
+        "previousQuest": "aabbccdd112233440000aa02"
+      },
+
+      "objectives": [
+        {
+          "type": "survive_location",
+          "location": "factory4_day",
+          "count": 2,
+          "description": "Survive and extract from Factory 2 times"
+        }
+      ],
+
+      "rewards": {
+        "xp": 5000,
+        "money": { "currency": "RUB", "amount": 35000 },
+        "items": [
+          { "itemTpl": "5755356824597772cb798962", "count": 5 }
+        ],
+        "traderStanding": 0.05,
+        "unlockAssortItems": []
+      }
+    }
+  ],
+
+  // ============================================================
+  // ROTATING QUESTS — Generated randomly at server start
+  // ============================================================
+
+  "rotatingQuests": [
+    // ---- Daily Kill Template ----
+    {
+      "id": "aabbccdd112233440000bb01",
+      "traderId": "aabbccdd11223344eeff5566",
+      "rotation": "daily",
+      "templateName": "Daily Elimination",
+      "questCount": 2,
+
+      "namePool": [
+        "Clean Up {location}",
+        "Reduce Their Numbers",
+        "Area Control: {location}",
+        "Pest Removal"
+      ],
+
+      "descriptionPool": [
+        "Viktor needs the area around {location} cleared out. Get to work.",
+        "Too many hostiles in {location}. Thin the herd.",
+        "Reports of enemy activity near {location}. Deal with it."
+      ],
+
+      "objectives": [
+        {
+          "type": "kill_enemy",
+          "targetPool": ["Savage"],
+          "locationPool": ["bigmap", "Woods", "Shoreline", "factory4_day"],
+          "countRange": { "min": 3, "max": 10 }
+        }
+      ],
+
+      "rewardScaling": {
+        "xpPerObjectiveCount": 400,
+        "baseMoney": 10000,
+        "moneyPerObjectiveCount": 2500,
+        "currency": "RUB",
+        "standing": 0.01
+      }
+    },
+
+    // ---- Weekly Handover Template ----
+    {
+      "id": "aabbccdd112233440000bb02",
+      "traderId": "aabbccdd11223344eeff5566",
+      "rotation": "weekly",
+      "templateName": "Weekly Collection",
+      "questCount": 1,
+
+      "namePool": [
+        "Viktor's Shopping List",
+        "Collector's Request",
+        "Supply Requisition"
+      ],
+
+      "descriptionPool": [
+        "Viktor needs supplies. Find what he's looking for in raid.",
+        "The stockpile is running low. Bring back what you find."
+      ],
+
+      "objectives": [
+        {
+          "type": "handover_fir_item",
+          "itemPool": [
+            "5755356824597772cb798962",
+            "590c657e86f77412b013051d",
+            "5d02778e86f774203e7dedbe"
+          ],
+          "foundInRaid": true,
+          "locationPool": [],
+          "countRange": { "min": 2, "max": 5 }
+        }
+      ],
+
+      "rewardScaling": {
+        "xpPerObjectiveCount": 600,
+        "baseMoney": 15000,
+        "moneyPerObjectiveCount": 5000,
+        "currency": "RUB",
+        "standing": 0.02
+      }
+    }
+  ]
+}

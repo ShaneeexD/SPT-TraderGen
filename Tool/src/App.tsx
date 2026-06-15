@@ -2,17 +2,20 @@ import { useState, useCallback, useEffect } from 'react'
 import {
   Store, Plus, Trash2, Download, AlertCircle, CheckCircle,
   ChevronDown, ChevronUp, Copy, RefreshCw, Eye, Package,
-  Shield, Star, Settings, FileJson, HelpCircle, ExternalLink, Upload,
+  Shield, Star, Settings, FileJson, HelpCircle, ExternalLink, Upload, Crosshair,
 } from 'lucide-react'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
 import type {
   TraderDefinition, AssortItem, LoyaltyLevel, BarterRequirement, ValidationError,
+  QuestPackDefinition,
 } from './types'
 import {
   createDefaultTrader, createDefaultAssortItem, createDefaultBarter, generateMongoId,
+  createDefaultQuestPack,
 } from './types'
-import { validateTrader, buildExportJson } from './validation'
+import { validateTrader, buildExportJson, validateQuestPack, buildQuestExportJson } from './validation'
+import QuestsTab from './QuestsTab'
 
 // Item name lookup via db.sp-tarkov.com API (fetches all names once, then caches)
 let itemNameDb: Map<string, string> | null = null
@@ -66,11 +69,13 @@ function useItemNames(itemIds: string[]) {
   return names
 }
 
-type Tab = 'general' | 'loyalty' | 'assort' | 'preview'
+type Tab = 'general' | 'loyalty' | 'assort' | 'quests' | 'preview'
 
 export default function App() {
   const [trader, setTrader] = useState<TraderDefinition>(createDefaultTrader)
+  const [questPack, setQuestPack] = useState<QuestPackDefinition>(createDefaultQuestPack)
   const [errors, setErrors] = useState<ValidationError[]>([])
+  const [questErrors, setQuestErrors] = useState<ValidationError[]>([])
   const [activeTab, setActiveTab] = useState<Tab>('general')
   const [expandedAssort, setExpandedAssort] = useState<Set<number>>(new Set())
   const [showExportSuccess, setShowExportSuccess] = useState(false)
@@ -81,10 +86,13 @@ export default function App() {
   }, [])
 
   const validate = useCallback(() => {
-    const errs = validateTrader(trader)
-    setErrors(errs)
-    return errs.length === 0
-  }, [trader])
+    const traderErrs = validateTrader(trader)
+    setErrors(traderErrs)
+    const hasQuests = questPack.storyQuests.length > 0 || questPack.rotatingQuests.length > 0
+    const qErrs = hasQuests ? validateQuestPack(questPack, trader.id) : []
+    setQuestErrors(qErrs)
+    return traderErrs.length === 0 && qErrs.length === 0
+  }, [trader, questPack])
 
   const handleExport = useCallback(async () => {
     if (!validate()) {
@@ -106,13 +114,35 @@ export default function App() {
       }
     }
 
+    // Quest pack (only if quests exist)
+    const questJson = buildQuestExportJson(questPack)
+    if (questJson) {
+      zip.file(`${basePath}/quests.json`, JSON.stringify(questJson, null, 2))
+    }
+
+    // Quest icons
+    if (questPack.defaultQuestIconDataUrl) {
+      const match = questPack.defaultQuestIconDataUrl.match(/^data:image\/\w+;base64,(.+)$/)
+      if (match) {
+        zip.file(`${basePath}/assets/default_quest_icon.png`, match[1], { base64: true })
+      }
+    }
+    for (const q of questPack.storyQuests) {
+      if (q.imageDataUrl) {
+        const match = q.imageDataUrl.match(/^data:image\/\w+;base64,(.+)$/)
+        if (match) {
+          zip.file(`${basePath}/assets/quest_${q.id}.png`, match[1], { base64: true })
+        }
+      }
+    }
+
     const blob = await zip.generateAsync({ type: 'blob' })
     saveAs(blob, `${packName}.zip`)
     setShowExportSuccess(true)
     setTimeout(() => setShowExportSuccess(false), 3000)
   }, [trader, validate])
 
-  const importFromJson = useCallback((jsonStr: string, packName?: string, avatarDataUrl?: string) => {
+  const importFromJson = useCallback((jsonStr: string, packName?: string, avatarDataUrl?: string, questJsonStr?: string, questIconDataUrl?: string, perQuestIconDataUrls?: Map<string, string>) => {
     try {
       const raw = jsonStr
         .replace(/\/\/.*$/gm, '')   // strip single-line comments
@@ -130,6 +160,38 @@ export default function App() {
       }
       setTrader(merged)
       setErrors([])
+
+      // Import quest pack if present
+      if (questJsonStr) {
+        try {
+          const questRaw = questJsonStr
+            .replace(/\/\/.*$/gm, '')
+            .replace(/\/\*[\s\S]*?\*\//g, '')
+            .replace(/,\s*([\]}])/g, '$1')
+          const questParsed = JSON.parse(questRaw)
+          const pack: QuestPackDefinition = {
+            ...createDefaultQuestPack(),
+            ...questParsed,
+          }
+          if (questIconDataUrl) pack.defaultQuestIconDataUrl = questIconDataUrl
+          // Match per-quest icons by quest ID
+          if (perQuestIconDataUrls && perQuestIconDataUrls.size > 0 && pack.storyQuests) {
+            pack.storyQuests = pack.storyQuests.map(q => {
+              const iconUrl = perQuestIconDataUrls.get(q.id)
+              if (iconUrl) {
+                return { ...q, imageDataUrl: iconUrl }
+              }
+              return q
+            })
+          }
+          setQuestPack(pack)
+        } catch {
+          console.warn('Failed to parse quests.json from import')
+        }
+      } else {
+        setQuestPack(createDefaultQuestPack())
+      }
+      setQuestErrors([])
     } catch {
       alert('Failed to parse JSON file. Check the file format.')
     }
@@ -148,6 +210,9 @@ export default function App() {
           const zip = await JSZip.loadAsync(file)
           let jsonFile: JSZip.JSZipObject | null = null
           let avatarFile: JSZip.JSZipObject | null = null
+          let questFile: JSZip.JSZipObject | null = null
+          let questIconFile: JSZip.JSZipObject | null = null
+          const perQuestIcons: Map<string, JSZip.JSZipObject> = new Map()
           let packName = ''
 
           for (const [path, entry] of Object.entries(zip.files)) {
@@ -165,6 +230,17 @@ export default function App() {
             if (path.match(/assets\/avatar\.(jpg|jpeg|png|webp)$/i)) {
               avatarFile = entry
             }
+            if (path.endsWith('quests.json')) {
+              questFile = entry
+            }
+            if (path.match(/assets\/default_quest_icon\.png$/i)) {
+              questIconFile = entry
+            }
+            // Match per-quest icons: assets/quest_{24-char-hex}.png
+            const questIconMatch = path.match(/assets\/quest_([0-9a-fA-F]{24})\.png$/)
+            if (questIconMatch) {
+              perQuestIcons.set(questIconMatch[1], entry)
+            }
           }
 
           if (!jsonFile) {
@@ -181,7 +257,21 @@ export default function App() {
             avatarDataUrl = `data:${mime};base64,${base64}`
           }
 
-          importFromJson(jsonStr, packName || undefined, avatarDataUrl)
+          const questJsonStr = questFile ? await questFile.async('string') : undefined
+          let questIconDataUrl: string | undefined
+          if (questIconFile) {
+            const base64 = await questIconFile.async('base64')
+            questIconDataUrl = `data:image/png;base64,${base64}`
+          }
+
+          // Resolve per-quest icon data URLs
+          const perQuestIconDataUrls: Map<string, string> = new Map()
+          for (const [questId, entry] of perQuestIcons) {
+            const base64 = await entry.async('base64')
+            perQuestIconDataUrls.set(questId, `data:image/png;base64,${base64}`)
+          }
+
+          importFromJson(jsonStr, packName || undefined, avatarDataUrl, questJsonStr, questIconDataUrl, perQuestIconDataUrls)
         } catch {
           alert('Failed to read ZIP file.')
         }
@@ -294,6 +384,7 @@ export default function App() {
     { id: 'general', label: 'General', icon: <Settings size={16} /> },
     { id: 'loyalty', label: 'Loyalty Levels', icon: <Star size={16} /> },
     { id: 'assort', label: 'Assortment', icon: <Package size={16} /> },
+    { id: 'quests', label: 'Quests', icon: <Crosshair size={16} /> },
     { id: 'preview', label: 'JSON Preview', icon: <FileJson size={16} /> },
   ]
 
@@ -319,7 +410,7 @@ export default function App() {
               <p className="mt-1"><span className="text-tarkov-accent">.json</span> — Loads trader data only. Pack name and avatar must be set manually.</p>
             </div>
           </div>
-          <button onClick={() => { setTrader(createDefaultTrader()); setErrors([]) }}
+          <button onClick={() => { setTrader(createDefaultTrader()); setQuestPack(createDefaultQuestPack()); setErrors([]); setQuestErrors([]) }}
             className="btn-secondary text-sm flex items-center gap-1.5">
             <Plus size={14} /> New Trader
           </button>
@@ -366,6 +457,11 @@ export default function App() {
                 {trader.assort.length}
               </span>
             )}
+            {tab.id === 'quests' && (questPack.storyQuests.length > 0 || questPack.rotatingQuests.length > 0) && (
+              <span className="ml-1 bg-tarkov-accent/20 text-tarkov-accent text-xs px-1.5 py-0.5 rounded-full">
+                {questPack.storyQuests.length + questPack.rotatingQuests.length}
+              </span>
+            )}
           </button>
         ))}
       </nav>
@@ -381,6 +477,14 @@ export default function App() {
             onAdd={addLoyaltyLevel}
             onRemove={removeLoyaltyLevel}
             onUpdate={updateLoyaltyLevel}
+          />
+        )}
+        {activeTab === 'quests' && (
+          <QuestsTab
+            questPack={questPack}
+            traderId={trader.id}
+            onChange={pack => { setQuestPack(pack); setQuestErrors([]) }}
+            errors={questErrors}
           />
         )}
         {activeTab === 'assort' && (
@@ -400,7 +504,7 @@ export default function App() {
           />
         )}
         {activeTab === 'preview' && (
-          <PreviewTab trader={trader} onValidate={validate} />
+          <PreviewTab trader={trader} questPack={questPack} onValidate={validate} />
         )}
       </main>
     </div>
@@ -881,14 +985,20 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
 }
 
 /* ===== PREVIEW TAB ===== */
-function PreviewTab({ trader, onValidate }: {
+function PreviewTab({ trader, questPack, onValidate }: {
   trader: TraderDefinition
+  questPack: QuestPackDefinition
   onValidate: () => boolean
 }) {
   const [validateResult, setValidateResult] = useState<'pass' | 'fail' | null>(null)
   const [copied, setCopied] = useState(false)
+  const [previewFile, setPreviewFile] = useState<'trader' | 'quests'>('trader')
 
-  const json = JSON.stringify(buildExportJson(trader), null, 2)
+  const traderJson = JSON.stringify(buildExportJson(trader), null, 2)
+  const questJson = buildQuestExportJson(questPack)
+  const questJsonStr = questJson ? JSON.stringify(questJson, null, 2) : null
+
+  const activeJson = previewFile === 'trader' ? traderJson : (questJsonStr || '// No quests defined')
 
   const handleValidate = () => {
     const isValid = onValidate()
@@ -897,7 +1007,7 @@ function PreviewTab({ trader, onValidate }: {
   }
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(json)
+    navigator.clipboard.writeText(activeJson)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -926,6 +1036,25 @@ function PreviewTab({ trader, onValidate }: {
         </div>
       </div>
 
+      {/* File toggle */}
+      <div className="flex gap-1 bg-tarkov-surface border border-tarkov-border rounded-lg p-1">
+        <button
+          onClick={() => setPreviewFile('trader')}
+          className={`flex-1 px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+            previewFile === 'trader' ? 'bg-tarkov-accent text-tarkov-bg' : 'text-tarkov-text-dim hover:text-tarkov-text'
+          }`}
+        >trader.json</button>
+        <button
+          onClick={() => setPreviewFile('quests')}
+          className={`flex-1 px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+            previewFile === 'quests' ? 'bg-tarkov-accent text-tarkov-bg' : 'text-tarkov-text-dim hover:text-tarkov-text'
+          }`}
+        >
+          quests.json
+          {!questJsonStr && <span className="ml-1 text-xs opacity-60">(empty)</span>}
+        </button>
+      </div>
+
       {validateResult === 'pass' && (
         <div className="bg-tarkov-success/10 border border-tarkov-success/30 rounded-lg px-4 py-2.5 text-sm text-tarkov-success flex items-center gap-2">
           <CheckCircle size={16} /> JSON is valid and ready to export!
@@ -934,7 +1063,7 @@ function PreviewTab({ trader, onValidate }: {
 
       <div className="card">
         <pre className="text-sm font-mono text-tarkov-text overflow-x-auto max-h-[70vh] overflow-y-auto leading-relaxed whitespace-pre">
-          {json}
+          {activeJson}
         </pre>
       </div>
     </div>

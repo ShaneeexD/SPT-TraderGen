@@ -50,6 +50,139 @@ export interface BarterRequirement {
   count: number
 }
 
+// ==================== Quest Types ====================
+
+export interface QuestPackDefinition {
+  defaultQuestIcon?: string
+  defaultQuestIconDataUrl?: string  // Tool-only: holds the drag-and-drop image data
+  storyQuests: StoryQuestDefinition[]
+  rotatingQuests: RotatingQuestTemplate[]
+}
+
+export interface StoryQuestDefinition {
+  id: string
+  traderId: string
+  name: string
+  description: string
+  successMessage: string
+  startedMessage: string
+  image?: string
+  imageDataUrl?: string  // Tool-only: holds the drag-and-drop image data
+  location: string
+  requirements: QuestRequirements
+  objectives: QuestObjective[]
+  rewards: QuestRewards
+}
+
+export interface QuestRequirements {
+  playerLevel: number
+  previousQuest?: string
+}
+
+export interface QuestObjective {
+  type: string
+  count: number
+  target?: string
+  location?: string
+  itemTpl?: string
+  description?: string
+  useAutoCounter?: boolean
+}
+
+export interface QuestRewards {
+  xp: number
+  money?: MoneyReward
+  traderStanding: number
+  items?: RewardItem[]
+  unlockAssortItems?: string[]
+}
+
+export interface MoneyReward {
+  currency: string
+  amount: number
+}
+
+export interface RewardItem {
+  itemTpl: string
+  count: number
+}
+
+export interface RotatingQuestTemplate {
+  templateId: string
+  namePattern: string
+  descriptionPattern: string
+  rotationType: string
+  objectiveTemplates: ObjectiveTemplate[]
+  locationPool: string[]
+  rewardScaling: RewardScaling
+}
+
+export interface ObjectiveTemplate {
+  type: string
+  countMin: number
+  countMax: number
+  target?: string
+  itemPool?: string[]
+}
+
+export interface RewardScaling {
+  xpPerObjectiveCount: number
+  baseMoney: number
+  moneyPerObjectiveCount: number
+  currency: string
+  standing: number
+}
+
+// Map location constants
+export const MAP_LOCATIONS = [
+  { value: 'any', label: 'Any Location' },
+  { value: 'bigmap', label: 'Customs' },
+  { value: 'factory4_day', label: 'Factory (Day)' },
+  { value: 'factory4_night', label: 'Factory (Night)' },
+  { value: 'Woods', label: 'Woods' },
+  { value: 'Shoreline', label: 'Shoreline' },
+  { value: 'Interchange', label: 'Interchange' },
+  { value: 'Lighthouse', label: 'Lighthouse' },
+  { value: 'Reserve', label: 'Reserve' },
+  { value: 'laboratory', label: 'The Lab' },
+  { value: 'TarkovStreets', label: 'Streets of Tarkov' },
+  { value: 'Sandbox', label: 'Ground Zero' },
+] as const
+
+export const OBJECTIVE_TYPES = [
+  { value: 'kill_enemy', label: 'Kill Enemies' },
+  { value: 'handover_item', label: 'Hand Over Items' },
+  { value: 'handover_fir_item', label: 'Hand Over Items (Found in Raid)' },
+  { value: 'survive_location', label: 'Survive & Extract' },
+  { value: 'extract_location', label: 'Extract from Location' },
+] as const
+
+export const ENEMY_TARGETS = [
+  { value: 'Savage', label: 'Scavs' },
+  { value: 'AnyPmc', label: 'PMCs' },
+  { value: 'Any', label: 'Any Enemy' },
+  { value: 'exUsec', label: 'Rogues' },
+  { value: 'pmcBot', label: 'Raiders' },
+  { value: 'bossBully', label: 'Reshala' },
+  { value: 'bossKilla', label: 'Killa' },
+  { value: 'bossKojaniy', label: 'Shturman' },
+  { value: 'bossSanitar', label: 'Sanitar' },
+  { value: 'bossTagilla', label: 'Tagilla' },
+  { value: 'bossGluhar', label: 'Gluhar' },
+  { value: 'bossZryachiy', label: 'Zryachiy' },
+  { value: 'bossBoar', label: 'Kaban' },
+  { value: 'bossPartisan', label: 'Partisan' },
+  { value: 'bossKolontay', label: 'Kolontay' },
+  { value: 'bossKnight', label: 'Knight' },
+  { value: 'sectantPriest', label: 'Cultist Priest' },
+  { value: 'sectantWarrior', label: 'Cultist Warrior' },
+] as const
+
+export const ROTATION_TYPES = [
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+] as const
+
 export interface ValidationError {
   field: string
   message: string
@@ -101,6 +234,54 @@ export function createDefaultAssortItem(): AssortItem {
 
 export function createDefaultBarter(): BarterRequirement {
   return { itemTpl: '', count: 1 }
+}
+
+export function createDefaultQuestPack(): QuestPackDefinition {
+  return {
+    storyQuests: [],
+    rotatingQuests: [],
+  }
+}
+
+export function createDefaultStoryQuest(traderId: string): StoryQuestDefinition {
+  return {
+    id: generateMongoId(),
+    traderId,
+    name: '',
+    description: '',
+    successMessage: 'Good work. Come back when you\'re ready.',
+    startedMessage: 'Get it done.',
+    location: 'any',
+    requirements: { playerLevel: 1 },
+    objectives: [],
+    rewards: { xp: 5000, money: { currency: 'RUB', amount: 50000 }, traderStanding: 0.02 },
+  }
+}
+
+export function createDefaultObjective(): QuestObjective {
+  return { type: 'kill_enemy', count: 5, target: 'Savage', useAutoCounter: true }
+}
+
+export function createDefaultRotatingTemplate(): RotatingQuestTemplate {
+  return {
+    templateId: generateMongoId(),
+    namePattern: 'Cleanup {location}',
+    descriptionPattern: 'Head to {location} and deal with the threat.',
+    rotationType: 'daily',
+    objectiveTemplates: [{ type: 'kill_enemy', countMin: 3, countMax: 10, target: 'Savage' }],
+    locationPool: ['bigmap', 'factory4_day', 'Woods'],
+    rewardScaling: {
+      xpPerObjectiveCount: 500,
+      baseMoney: 20000,
+      moneyPerObjectiveCount: 5000,
+      currency: 'RUB',
+      standing: 0.01,
+    },
+  }
+}
+
+export function createDefaultObjectiveTemplate(): ObjectiveTemplate {
+  return { type: 'kill_enemy', countMin: 3, countMax: 10, target: 'Savage' }
 }
 
 export function generateMongoId(): string {

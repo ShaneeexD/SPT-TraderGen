@@ -6,6 +6,7 @@ using SPTarkov.Server.Core.Models.Logging;
 using SPTarkov.Server.Core.Models.Spt.Mod;
 using SPTarkov.Server.Core.Models.Utils;
 using TraderGen.Services;
+using TraderGen.Validation;
 
 namespace TraderGen;
 
@@ -27,11 +28,13 @@ public record ModMetadata : AbstractModMetadata
 [Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 1)]
 public class TraderGenPlugin(
     ISptLogger<TraderGenPlugin> logger,
+    ModHelper modHelper,
     TraderLoader traderLoader,
-    TraderRegistrar traderRegistrar
+    TraderRegistrar traderRegistrar,
+    WTTServerCommonLib.WTTServerCommonLib wttCommon
 ) : IOnLoad
 {
-    public Task OnLoad()
+    public async Task OnLoad()
     {
         logger.LogWithColor("[TraderGen] ====================================", LogTextColor.Cyan);
         logger.LogWithColor("[TraderGen] TraderGen Framework v1.0.0 loading...", LogTextColor.Cyan);
@@ -46,7 +49,7 @@ public class TraderGenPlugin(
                 "[TraderGen] No trader packs found. Place trader pack folders in: user/mods/TraderGen/traders/",
                 LogTextColor.Yellow
             );
-            return Task.CompletedTask;
+            return;
         }
 
         logger.LogWithColor($"[TraderGen] Found {loadedTraders.Count} trader definition(s). Registering...", LogTextColor.Cyan);
@@ -75,6 +78,84 @@ public class TraderGenPlugin(
         );
         logger.LogWithColor("[TraderGen] ====================================", LogTextColor.Cyan);
 
-        return Task.CompletedTask;
+        // ==================== Quest Loading Pipeline ====================
+        await LoadAndRegisterQuests(loadedTraders);
+    }
+
+    private async Task LoadAndRegisterQuests(List<TraderLoader.LoadedTrader> loadedTraders)
+    {
+        // Discover quest packs from trader pack folders
+        var questPacks = QuestLoader.LoadAllQuestPacks(loadedTraders, logger);
+        if (questPacks.Count == 0)
+            return;
+
+        logger.LogWithColor($"[TraderGen] Found {questPacks.Count} quest pack(s). Processing...", LogTextColor.Cyan);
+
+        var modPath = modHelper.GetAbsolutePathToModFolder(Assembly.GetExecutingAssembly());
+        var questOutputDir = Path.Combine(modPath, "db", "CustomQuests");
+
+        // Clean previous generated BSG-format files (they are rebuilt every startup)
+        if (Directory.Exists(questOutputDir))
+            Directory.Delete(questOutputDir, true);
+
+        var totalQuests = 0;
+        var questPacksFailed = 0;
+
+        foreach (var questPack in questPacks)
+        {
+            var packName = Path.GetFileName(questPack.PackFolder);
+
+            // Validate
+            var errors = QuestValidator.Validate(questPack.Definition, questPack.TraderId, packName);
+            if (errors.Count > 0)
+            {
+                logger.LogWithColor($"[TraderGen] Quest validation errors in '{packName}':", LogTextColor.Red);
+                foreach (var error in errors)
+                    logger.LogWithColor($"  \u2717 {error}", LogTextColor.Red);
+                questPacksFailed++;
+                continue;
+            }
+
+            // Collect story quests
+            var allQuests = new List<Models.StoryQuestDefinition>(questPack.Definition.StoryQuests);
+
+            // Resolve rotating quests (load cached or generate new, with expiration tracking)
+            if (questPack.Definition.RotatingQuests.Count > 0)
+            {
+                var rotatingQuests = RotatingQuestService.ResolveRotatingQuests(
+                    questPack.Definition.RotatingQuests,
+                    questPack.TraderId,
+                    modPath,
+                    logger);
+                allQuests.AddRange(rotatingQuests);
+            }
+
+            // Build BSG-format quest files for WTT lib
+            var count = QuestBuilder.BuildQuestFiles(
+                questPack.TraderId, allQuests, questOutputDir,
+                questPack.PackFolder, questPack.Definition.DefaultQuestIcon, logger);
+            if (count > 0)
+                totalQuests += count;
+            else
+                questPacksFailed++;
+        }
+
+        if (totalQuests > 0)
+        {
+            // Use WTT library to register the generated quests into the SPT database
+            var assembly = Assembly.GetExecutingAssembly();
+            await wttCommon.CustomQuestService.CreateCustomQuests(assembly);
+
+            logger.LogWithColor(
+                $"[TraderGen] Registered {totalQuests} quest(s) via WTT CustomQuestService.",
+                LogTextColor.Green);
+        }
+
+        if (questPacksFailed > 0)
+        {
+            logger.LogWithColor(
+                $"[TraderGen] {questPacksFailed} quest pack(s) failed validation or building.",
+                LogTextColor.Yellow);
+        }
     }
 }

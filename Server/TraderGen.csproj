@@ -16,11 +16,17 @@
     <PackageReference Include="SPTarkov.Common" Version="4.0.13" />
     <PackageReference Include="SPTarkov.DI" Version="4.0.13" />
     <PackageReference Include="SPTarkov.Server.Core" Version="4.0.13" />
+    <PackageReference Include="WTT-ServerCommonLib" Version="2.0.20" />
   </ItemGroup>
 
-  <!-- Copy DLL to build output folder for easy deployment -->
+  <!-- Copy DLL and traders/ folder to build output for easy deployment -->
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <MakeDir Directories="$(ProjectDir)Build\SPT\user\mods\TraderGen" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ProjectDir)Build\SPT\user\mods\TraderGen" />
+
+    <ItemGroup>
+      <TraderFiles Include="$(ProjectDir)traders\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(TraderFiles)" DestinationFiles="@(TraderFiles->'$(ProjectDir)Build\SPT\user\mods\TraderGen\traders\%(RecursiveDir)%(Filename)%(Extension)')" />
   </Target>
 </Project>

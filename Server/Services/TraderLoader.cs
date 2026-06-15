@@ -49,14 +49,14 @@ public class TraderLoader(ISptLogger<TraderLoader> logger, ModHelper modHelper)
         // Load from subfolders (recommended structure: traders/MyTraderPack/trader.json)
         foreach (var packDir in Directory.GetDirectories(tradersDir))
         {
-            var jsonFiles = Directory.GetFiles(packDir, "*.json", SearchOption.TopDirectoryOnly);
-            foreach (var jsonFile in jsonFiles)
+            var traderFile = Path.Combine(packDir, "trader.json");
+            if (!File.Exists(traderFile))
+                continue;
+
+            var loaded = TryLoadTraderFile(traderFile, packDir);
+            if (loaded != null)
             {
-                var loaded = TryLoadTraderFile(jsonFile, packDir);
-                if (loaded != null)
-                {
-                    results.Add(loaded);
-                }
+                results.Add(loaded);
             }
         }
 
