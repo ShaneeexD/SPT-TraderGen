@@ -107,9 +107,9 @@ export function buildExportJson(trader: TraderDefinition): object {
       const out: Record<string, unknown> = {
         itemTpl: item.itemTpl,
         loyaltyLevel: item.loyaltyLevel,
-        stock: item.stock,
         unlimitedStock: item.unlimitedStock,
       }
+      if (!item.unlimitedStock) out.stock = item.stock
       if (item.barter && item.barter.length > 0) {
         out.barter = item.barter
       } else {
