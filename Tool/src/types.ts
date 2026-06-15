@@ -1,4 +1,5 @@
 export interface TraderDefinition {
+  enabled: boolean
   id: string
   nickname: string
   firstName: string
@@ -53,6 +54,7 @@ export interface ValidationError {
 
 export function createDefaultTrader(): TraderDefinition {
   return {
+    enabled: true,
     id: generateMongoId(),
     nickname: '',
     firstName: '',

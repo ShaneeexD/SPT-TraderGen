@@ -94,6 +94,13 @@ public class TraderLoader(ISptLogger<TraderLoader> logger, ModHelper modHelper)
                 return null;
             }
 
+            // Skip disabled traders
+            if (!trader.Enabled)
+            {
+                logger.LogWithColor($"[TraderGen] Skipping disabled trader in '{fileName}'", LogTextColor.Yellow);
+                return null;
+            }
+
             // Validate the trader definition
             var errors = TraderValidator.Validate(trader, fileName);
             if (errors.Count > 0)

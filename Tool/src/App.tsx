@@ -385,7 +385,10 @@ function GeneralTab({ trader, update, hasError, errorsByField }: {
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+        <div className="flex flex-wrap justify-center gap-4 mt-4">
+          <Toggle label="Enabled" value={trader.enabled}
+            onChange={v => update('enabled', v)}
+            tooltip="Master toggle. If off, TraderGen will skip this trader entirely without needing to delete the file." />
           <Toggle label="Unlocked by Default" value={trader.unlockedByDefault}
             onChange={v => update('unlockedByDefault', v)}
             tooltip="If on, the trader is available from level 1. If off, players must meet requirements to unlock." />

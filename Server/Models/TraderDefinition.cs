@@ -6,6 +6,9 @@ namespace TraderGen.Models;
 // This is the schema that users fill out (or generate via the TraderGen Tool).
 public class TraderDefinition
 {
+    // Whether this trader is enabled. Set to false to skip loading without deleting the file.
+    [JsonPropertyName("enabled")]
+    public bool Enabled { get; set; } = true;
 
     // Unique trader ID. Should be a 24-character hex string (MongoDB ObjectId format).
     [JsonPropertyName("id")]
@@ -47,14 +50,6 @@ public class TraderDefinition
     // Whether the trader is unlocked from the start (default true).
     [JsonPropertyName("unlockedByDefault")]
     public bool UnlockedByDefault { get; set; } = true;
-
-    // Whether the trader can buy items from the player.
-    [JsonPropertyName("buyerEnabled")]
-    public bool BuyerEnabled { get; set; } = true;
-
-    // Whether the trader appears on the flea market / ragfair.
-    [JsonPropertyName("ragfairEnabled")]
-    public bool RagfairEnabled { get; set; } = true;
 
     // Whether the trader can buy items from the player.
     [JsonPropertyName("buyerEnabled")]

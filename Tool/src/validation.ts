@@ -83,6 +83,7 @@ export function validateTrader(trader: TraderDefinition): ValidationError[] {
 
 export function buildExportJson(trader: TraderDefinition): object {
   const output: Record<string, unknown> = {
+    enabled: trader.enabled,
     id: trader.id,
     nickname: trader.nickname,
     firstName: trader.firstName,
