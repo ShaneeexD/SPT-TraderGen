@@ -75,9 +75,9 @@ public static class QuestBuilder
         // Write files
         var jsonOpts = new JsonSerializerOptions { WriteIndented = true };
 
-        File.WriteAllText(
-            Path.Combine(questsDir, "quests.json"),
-            allQuests.ToJsonString(jsonOpts));
+        var questsFilePath = Path.Combine(questsDir, "quests.json");
+        File.WriteAllText(questsFilePath, allQuests.ToJsonString(jsonOpts));
+        logger.LogWithColor($"[TraderGen] DEBUG: Wrote quest file → {questsFilePath}", LogTextColor.Yellow);
 
         File.WriteAllText(
             Path.Combine(localesDir, "en.json"),

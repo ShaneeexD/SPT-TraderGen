@@ -184,20 +184,39 @@ export function validateQuestPack(pack: QuestPackDefinition, traderId: string): 
     const t = pack.rotatingQuests[i]
     const prefix = `Rotating[${i}]`
 
-    if (!t.templateId || !HEX_24.test(t.templateId)) {
-      errors.push({ field: `rotating.${i}.templateId`, message: `${prefix}: Template ID must be 24-char hex.` })
+    if (!t.id || !HEX_24.test(t.id)) {
+      errors.push({ field: `rotating.${i}.id`, message: `${prefix}: ID must be a 24-char hex string.` })
     }
-    if (!t.namePattern.trim()) {
-      errors.push({ field: `rotating.${i}.namePattern`, message: `${prefix}: Name pattern is required.` })
+    if (!VALID_ROTATION_TYPES.includes(t.rotation)) {
+      errors.push({ field: `rotating.${i}.rotation`, message: `${prefix}: Rotation must be "daily" or "weekly".` })
     }
-    if (!VALID_ROTATION_TYPES.includes(t.rotationType)) {
-      errors.push({ field: `rotating.${i}.rotationType`, message: `${prefix}: Rotation type must be "daily" or "weekly".` })
+    if (t.namePool.length === 0) {
+      errors.push({ field: `rotating.${i}.namePool`, message: `${prefix}: At least one name is required in namePool.` })
     }
-    if (t.objectiveTemplates.length === 0) {
-      errors.push({ field: `rotating.${i}.objectives`, message: `${prefix}: At least one objective template is required.` })
+    if (t.objectives.length === 0) {
+      errors.push({ field: `rotating.${i}.objectives`, message: `${prefix}: At least one objective is required.` })
     }
-    if (t.locationPool.length === 0) {
-      errors.push({ field: `rotating.${i}.locationPool`, message: `${prefix}: At least one location is required.` })
+    for (let j = 0; j < t.objectives.length; j++) {
+      const obj = t.objectives[j]
+      const objPrefix = `${prefix}.Objective[${j}]`
+      if (!VALID_OBJECTIVE_TYPES.includes(obj.type)) {
+        errors.push({ field: `rotating.${i}.obj.${j}.type`, message: `${objPrefix}: Invalid type "${obj.type}".` })
+      }
+      if (obj.countRange.min < 1) {
+        errors.push({ field: `rotating.${i}.obj.${j}.countMin`, message: `${objPrefix}: countRange.min must be >= 1.` })
+      }
+      if (obj.countRange.max < obj.countRange.min) {
+        errors.push({ field: `rotating.${i}.obj.${j}.countMax`, message: `${objPrefix}: countRange.max must be >= min.` })
+      }
+      if (obj.type === 'kill_enemy' && obj.targetPool.length === 0) {
+        errors.push({ field: `rotating.${i}.obj.${j}.targetPool`, message: `${objPrefix}: targetPool is required for kill_enemy.` })
+      }
+      if ((obj.type === 'handover_item' || obj.type === 'handover_fir_item') && obj.itemPool.length === 0) {
+        errors.push({ field: `rotating.${i}.obj.${j}.itemPool`, message: `${objPrefix}: itemPool is required for handover objectives.` })
+      }
+    }
+    if (t.questCount < 1) {
+      errors.push({ field: `rotating.${i}.questCount`, message: `${prefix}: questCount must be >= 1.` })
     }
   }
 
@@ -247,20 +266,29 @@ export function buildQuestExportJson(pack: QuestPackDefinition): object | null {
   }
 
   if (pack.rotatingQuests.length > 0) {
-    output.rotatingQuests = pack.rotatingQuests.map(t => ({
-      templateId: t.templateId,
-      namePattern: t.namePattern,
-      descriptionPattern: t.descriptionPattern,
-      rotationType: t.rotationType,
-      objectiveTemplates: t.objectiveTemplates.map(ot => {
-        const o: Record<string, unknown> = { type: ot.type, countMin: ot.countMin, countMax: ot.countMax }
-        if (ot.target) o.target = ot.target
-        if (ot.itemPool && ot.itemPool.length > 0) o.itemPool = ot.itemPool
-        return o
-      }),
-      locationPool: t.locationPool,
-      rewardScaling: t.rewardScaling,
-    }))
+    output.rotatingQuests = pack.rotatingQuests.map(t => {
+      const tpl: Record<string, unknown> = {
+        id: t.id,
+        rotation: t.rotation,
+        namePool: t.namePool,
+        descriptionPool: t.descriptionPool,
+        objectives: t.objectives.map(obj => {
+          const o: Record<string, unknown> = {
+            type: obj.type,
+            countRange: obj.countRange,
+          }
+          if (obj.targetPool?.length > 0) o.targetPool = obj.targetPool
+          if (obj.locationPool?.length > 0) o.locationPool = obj.locationPool
+          if (obj.itemPool?.length > 0) o.itemPool = obj.itemPool
+          if (obj.foundInRaid) o.foundInRaid = true
+          return o
+        }),
+        rewardScaling: t.rewardScaling,
+        questCount: t.questCount,
+      }
+      if (t.image) tpl.image = t.image
+      return tpl
+    })
   } else {
     output.rotatingQuests = []
   }

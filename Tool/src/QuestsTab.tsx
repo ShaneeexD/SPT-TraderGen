@@ -6,11 +6,11 @@ import {
 } from 'lucide-react'
 import type {
   QuestPackDefinition, StoryQuestDefinition, QuestObjective, QuestRewards,
-  RotatingQuestTemplate, ObjectiveTemplate, ValidationError,
+  RotatingQuestTemplate, RotatingObjectiveTemplate, ValidationError,
 } from './types'
 import {
   createDefaultStoryQuest, createDefaultObjective, createDefaultRotatingTemplate,
-  createDefaultObjectiveTemplate, generateMongoId,
+  createDefaultRotatingObjective, generateMongoId,
   MAP_LOCATIONS, OBJECTIVE_TYPES, ENEMY_TARGETS, ROTATION_TYPES,
 } from './types'
 
@@ -293,19 +293,19 @@ export default function QuestsTab({ questPack, traderId, onChange, errors }: {
               const tmplErrors = errors.filter(e => e.field.startsWith(`rotating.${ti}`))
 
               return (
-                <div key={tmpl.templateId} className={`card ${tmplErrors.length > 0 ? 'border-tarkov-error/50' : ''}`}>
+                <div key={tmpl.id} className={`card ${tmplErrors.length > 0 ? 'border-tarkov-error/50' : ''}`}>
                   <div className="flex items-center justify-between cursor-pointer" onClick={() => setExpandedRotating(isExpanded ? null : ti)}>
                     <div className="flex items-center gap-3">
                       {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       <Repeat size={14} className="text-tarkov-accent" />
                       <span className="font-medium text-tarkov-text">
-                        {tmpl.namePattern || '(unnamed template)'}
+                        {tmpl.namePool[0] || '(unnamed template)'}
                       </span>
                       <span className={`text-xs px-2 py-0.5 rounded ${
-                        tmpl.rotationType === 'daily' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'
-                      }`}>{tmpl.rotationType}</span>
+                        tmpl.rotation === 'daily' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'
+                      }`}>{tmpl.rotation}</span>
                       <span className="text-xs text-tarkov-text-dim">
-                        {tmpl.locationPool.length} locations
+                        {tmpl.objectives.length} objectives
                       </span>
                       {tmplErrors.length > 0 && <AlertCircle size={14} className="text-tarkov-error" />}
                     </div>
@@ -410,14 +410,31 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, errors }: {
             min={1} max={79} />
         </Field>
 
-        <Field label="Previous Quest" tooltip="Select a quest that must be completed first, or leave as 'None' for no prerequisite.">
-          <select className="input-field" value={quest.requirements.previousQuest || ''}
-            onChange={e => onChange({ requirements: { ...quest.requirements, previousQuest: e.target.value || undefined } })}>
+        <Field label="Previous Quest" tooltip="Select a quest that must be completed first, or leave as 'None' for no prerequisite. Choose 'Other' to enter an external quest ID.">
+          <select className="input-field" value={
+            !quest.requirements.previousQuest ? '' :
+            otherQuests.some(q => q.id === quest.requirements.previousQuest) ? quest.requirements.previousQuest :
+            '__other__'
+          }
+            onChange={e => {
+              const val = e.target.value
+              if (val === '__other__') {
+                onChange({ requirements: { ...quest.requirements, previousQuest: '' } })
+              } else {
+                onChange({ requirements: { ...quest.requirements, previousQuest: val || undefined } })
+              }
+            }}>
             <option value="">None (no prerequisite)</option>
             {otherQuests.map(q => (
               <option key={q.id} value={q.id}>{q.name || q.id}</option>
             ))}
+            <option value="__other__">Other (external quest ID)</option>
           </select>
+          {quest.requirements.previousQuest !== undefined && !otherQuests.some(q => q.id === quest.requirements.previousQuest) && (
+            <input className="input-field font-mono text-sm mt-1" value={quest.requirements.previousQuest || ''}
+              onChange={e => onChange({ requirements: { ...quest.requirements, previousQuest: e.target.value || undefined } })}
+              placeholder="Enter a 24-char quest ID from another mod or vanilla" maxLength={24} />
+          )}
         </Field>
       </div>
 
@@ -602,9 +619,14 @@ function ObjectiveEditor({ objective, onChange }: {
         )}
 
         {isHandover && (
-          <Field label="Item Template ID" tooltip="The 24-char hex ID of the item to hand over.">
+          <Field label="Item Template ID" tooltip="The 24-char hex ID of the item to hand over. Find IDs at db.sp-tarkov.com/search">
             <input className="input-field text-sm font-mono" value={objective.itemTpl || ''}
               onChange={e => onChange({ itemTpl: e.target.value })} placeholder="24-char hex" maxLength={24} />
+            <p className="text-xs text-tarkov-text-dim mt-1">
+              Find IDs at{' '}
+              <a href="https://db.sp-tarkov.com/search" target="_blank" rel="noopener noreferrer"
+                className="text-tarkov-accent hover:text-tarkov-accent-hover underline">db.sp-tarkov.com</a>
+            </p>
           </Field>
         )}
 
@@ -660,140 +682,193 @@ function RotatingTemplateEditor({ template, onChange, errors }: {
   onChange: (updates: Partial<RotatingQuestTemplate>) => void
   errors: ValidationError[]
 }) {
-  const addObjTemplate = () => {
-    onChange({ objectiveTemplates: [...template.objectiveTemplates, createDefaultObjectiveTemplate()] })
+  const addObjective = () => {
+    onChange({ objectives: [...template.objectives, createDefaultRotatingObjective()] })
   }
 
-  const removeObjTemplate = (idx: number) => {
-    onChange({ objectiveTemplates: template.objectiveTemplates.filter((_, i) => i !== idx) })
+  const removeObjective = (idx: number) => {
+    onChange({ objectives: template.objectives.filter((_, i) => i !== idx) })
   }
 
-  const updateObjTemplate = (idx: number, updates: Partial<ObjectiveTemplate>) => {
+  const updateObjective = (idx: number, updates: Partial<RotatingObjectiveTemplate>) => {
     onChange({
-      objectiveTemplates: template.objectiveTemplates.map((o, i) => i === idx ? { ...o, ...updates } : o),
+      objectives: template.objectives.map((o, i) => i === idx ? { ...o, ...updates } : o),
     })
   }
 
-  const toggleLocation = (loc: string) => {
-    const current = template.locationPool
+  const toggleObjLocation = (objIdx: number, loc: string) => {
+    const obj = template.objectives[objIdx]
+    const current = obj.locationPool
     const updated = current.includes(loc)
       ? current.filter(l => l !== loc)
       : [...current, loc]
-    onChange({ locationPool: updated })
+    updateObjective(objIdx, { locationPool: updated })
+  }
+
+  const toggleObjTarget = (objIdx: number, target: string) => {
+    const obj = template.objectives[objIdx]
+    const current = obj.targetPool
+    const updated = current.includes(target)
+      ? current.filter(t => t !== target)
+      : [...current, target]
+    updateObjective(objIdx, { targetPool: updated })
   }
 
   return (
     <div className="mt-4 pt-4 border-t border-tarkov-border space-y-5">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Field label="Template ID" tooltip="Unique 24-char hex ID for this template.">
           <div className="flex gap-2">
-            <input className="input-field flex-1 font-mono text-sm" value={template.templateId}
-              onChange={e => onChange({ templateId: e.target.value })} maxLength={24} />
-            <button onClick={() => onChange({ templateId: generateMongoId() })} className="btn-secondary text-xs px-2">
+            <input className="input-field flex-1 font-mono text-sm" value={template.id}
+              onChange={e => onChange({ id: e.target.value })} maxLength={24} />
+            <button onClick={() => onChange({ id: generateMongoId() })} className="btn-secondary text-xs px-2">
               <RefreshCw size={14} />
             </button>
           </div>
         </Field>
 
-        <Field label="Rotation Type" tooltip="Daily quests reset every 24h. Weekly quests reset every 7 days.">
-          <select className="input-field" value={template.rotationType}
-            onChange={e => onChange({ rotationType: e.target.value })}>
+        <Field label="Rotation" tooltip="Daily quests reset every 24h. Weekly quests reset every 7 days.">
+          <select className="input-field" value={template.rotation}
+            onChange={e => onChange({ rotation: e.target.value })}>
             {ROTATION_TYPES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
         </Field>
 
-        <Field label="Name Pattern" tooltip="Use {location} as placeholder. E.g. 'Cleanup {location}' → 'Cleanup Customs'.">
-          <input className="input-field" value={template.namePattern}
-            onChange={e => onChange({ namePattern: e.target.value })} placeholder="e.g. Cleanup {location}" />
+        <Field label="Quest Count" tooltip="How many quests to generate from this template.">
+          <input type="number" className="input-field text-sm" value={template.questCount}
+            onChange={e => onChange({ questCount: Math.max(1, Number(e.target.value)) })} min={1} />
         </Field>
       </div>
 
-      <Field label="Description Pattern" tooltip="Description text. Use {location} placeholder.">
-        <textarea className="input-field min-h-[50px] resize-y text-sm" value={template.descriptionPattern}
-          onChange={e => onChange({ descriptionPattern: e.target.value })}
+      {/* Name Pool */}
+      <Field label="Name Pool" tooltip="One name per line. Use {location} as placeholder. A random name is picked for each generated quest.">
+        <textarea className="input-field min-h-[60px] resize-y text-sm" value={template.namePool.join('\n')}
+          onChange={e => onChange({ namePool: e.target.value.split('\n').filter(s => s.trim()) })}
+          placeholder="Cleanup {location}\nHunt on {location}\nPatrol {location}" />
+      </Field>
+
+      {/* Description Pool */}
+      <Field label="Description Pool" tooltip="One description per line. Use {location} placeholder. A random description is picked.">
+        <textarea className="input-field min-h-[50px] resize-y text-sm" value={template.descriptionPool.join('\n')}
+          onChange={e => onChange({ descriptionPool: e.target.value.split('\n').filter(s => s.trim()) })}
           placeholder="Head to {location} and deal with the threat." />
       </Field>
 
-      {/* Location Pool */}
-      <div>
-        <label className="label flex items-center gap-1.5 mb-2">
-          <MapPin size={13} /> Location Pool
-          <span className="relative group">
-            <HelpCircle size={13} className="text-tarkov-text-dim hover:text-tarkov-accent cursor-help transition-colors" />
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-tarkov-bg border border-tarkov-border rounded-lg text-xs text-tarkov-text font-normal w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50 shadow-xl leading-relaxed pointer-events-none">
-              The server picks a random location from this pool each time it generates a quest.
-            </span>
-          </span>
-        </label>
-        <div className="flex flex-wrap gap-2">
-          {MAP_LOCATIONS.filter(l => l.value !== 'any').map(loc => {
-            const active = template.locationPool.includes(loc.value)
-            return (
-              <button key={loc.value}
-                onClick={() => toggleLocation(loc.value)}
-                className={`text-xs px-3 py-1.5 rounded border transition-colors ${
-                  active
-                    ? 'bg-tarkov-accent/20 border-tarkov-accent/50 text-tarkov-accent'
-                    : 'bg-tarkov-bg border-tarkov-border text-tarkov-text-dim hover:border-tarkov-accent/30'
-                }`}
-              >
-                {loc.label}
-              </button>
-            )
-          })}
-        </div>
+      {/* Template Icon */}
+      <div className="max-w-sm">
+        <Field label="Quest Icon (optional)" tooltip="Custom icon for quests generated from this template. Drop a JPG/PNG image.">
+          <ImageDrop
+            dataUrl={template.imageDataUrl}
+            onDrop={url => onChange({ imageDataUrl: url, image: `assets/tpl_${template.id}.jpg` })}
+            label="Template icon"
+            hint="Drop an icon for this template's quests"
+          />
+        </Field>
       </div>
 
-      {/* Objective Templates */}
+      {/* Objectives */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h4 className="text-sm font-semibold text-tarkov-text-dim flex items-center gap-2">
-            <Target size={14} /> Objective Templates ({template.objectiveTemplates.length})
+            <Target size={14} /> Objectives ({template.objectives.length})
           </h4>
-          <button onClick={addObjTemplate} className="btn-secondary text-xs flex items-center gap-1.5">
+          <button onClick={addObjective} className="btn-secondary text-xs flex items-center gap-1.5">
             <Plus size={12} /> Add
           </button>
         </div>
 
-        <div className="space-y-2">
-          {template.objectiveTemplates.map((ot, oi) => (
-            <div key={oi} className="bg-tarkov-bg rounded-lg border border-tarkov-border p-3">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="space-y-3">
+          {template.objectives.map((obj, oi) => (
+            <div key={oi} className="bg-tarkov-bg rounded-lg border border-tarkov-border p-3 space-y-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <Field label="Type">
-                  <select className="input-field text-sm" value={ot.type}
+                  <select className="input-field text-sm" value={obj.type}
                     onChange={e => {
                       const t = e.target.value
-                      const updates: Partial<ObjectiveTemplate> = { type: t }
-                      if (t === 'kill_enemy') updates.target = 'Savage'
-                      else updates.target = undefined
-                      updateObjTemplate(oi, updates)
+                      const updates: Partial<RotatingObjectiveTemplate> = { type: t }
+                      if (t === 'kill_enemy') updates.targetPool = ['Savage']
+                      else updates.targetPool = []
+                      if (t === 'handover_item' || t === 'handover_fir_item') updates.itemPool = []
+                      updateObjective(oi, updates)
                     }}>
                     {OBJECTIVE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </Field>
                 <Field label="Min Count">
-                  <input type="number" className="input-field text-sm" value={ot.countMin}
-                    onChange={e => updateObjTemplate(oi, { countMin: Number(e.target.value) })} min={1} />
+                  <input type="number" className="input-field text-sm" value={obj.countRange.min}
+                    onChange={e => updateObjective(oi, { countRange: { ...obj.countRange, min: Number(e.target.value) } })} min={1} />
                 </Field>
                 <Field label="Max Count">
-                  <input type="number" className="input-field text-sm" value={ot.countMax}
-                    onChange={e => updateObjTemplate(oi, { countMax: Number(e.target.value) })} min={1} />
+                  <input type="number" className="input-field text-sm" value={obj.countRange.max}
+                    onChange={e => updateObjective(oi, { countRange: { ...obj.countRange, max: Number(e.target.value) } })} min={1} />
                 </Field>
-                {ot.type === 'kill_enemy' && (
-                  <Field label="Target">
-                    <select className="input-field text-sm" value={ot.target || 'Savage'}
-                      onChange={e => updateObjTemplate(oi, { target: e.target.value })}>
-                      {ENEMY_TARGETS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                    </select>
-                  </Field>
-                )}
                 <div className="flex items-end">
-                  <button onClick={() => removeObjTemplate(oi)}
+                  <button onClick={() => removeObjective(oi)}
                     className="text-tarkov-error hover:text-tarkov-error/80 mb-2">
                     <Trash2 size={14} />
                   </button>
                 </div>
               </div>
+
+              {/* Per-objective target pool for kill_enemy */}
+              {obj.type === 'kill_enemy' && (
+                <div>
+                  <label className="label text-xs mb-1">Target Pool (select targets)</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ENEMY_TARGETS.map(t => {
+                      const active = obj.targetPool.includes(t.value)
+                      return (
+                        <button key={t.value}
+                          onClick={() => toggleObjTarget(oi, t.value)}
+                          className={`text-xs px-2 py-1 rounded border transition-colors ${
+                            active
+                              ? 'bg-tarkov-accent/20 border-tarkov-accent/50 text-tarkov-accent'
+                              : 'bg-tarkov-bg border-tarkov-border text-tarkov-text-dim hover:border-tarkov-accent/30'
+                          }`}>
+                          {t.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Per-objective location pool */}
+              <div>
+                <label className="label text-xs mb-1 flex items-center gap-1">
+                  <MapPin size={11} /> Location Pool
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {MAP_LOCATIONS.filter(l => l.value !== 'any').map(loc => {
+                    const active = obj.locationPool.includes(loc.value)
+                    return (
+                      <button key={loc.value}
+                        onClick={() => toggleObjLocation(oi, loc.value)}
+                        className={`text-xs px-2 py-1 rounded border transition-colors ${
+                          active
+                            ? 'bg-tarkov-accent/20 border-tarkov-accent/50 text-tarkov-accent'
+                            : 'bg-tarkov-bg border-tarkov-border text-tarkov-text-dim hover:border-tarkov-accent/30'
+                        }`}>
+                        {loc.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Per-objective item pool for handover types */}
+              {(obj.type === 'handover_item' || obj.type === 'handover_fir_item') && (
+                <Field label="Item Pool (template IDs, one per line)" tooltip="24-char hex item template IDs. A random item is picked for each generated quest. Find IDs at db.sp-tarkov.com/search">
+                  <textarea className="input-field min-h-[40px] resize-y text-xs font-mono" value={obj.itemPool.join('\n')}
+                    onChange={e => updateObjective(oi, { itemPool: e.target.value.split('\n').filter(s => s.trim()) })}
+                    placeholder="5449016a4bdc2d6f028b456f" />
+                  <p className="text-xs text-tarkov-text-dim mt-1">
+                    Find item IDs at{' '}
+                    <a href="https://db.sp-tarkov.com/search" target="_blank" rel="noopener noreferrer"
+                      className="text-tarkov-accent hover:text-tarkov-accent-hover underline">db.sp-tarkov.com</a>
+                  </p>
+                </Field>
+              )}
             </div>
           ))}
         </div>

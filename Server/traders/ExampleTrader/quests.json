@@ -140,9 +140,7 @@
     // ---- Daily Kill Template ----
     {
       "id": "aabbccdd112233440000bb01",
-      "traderId": "aabbccdd11223344eeff5566",
       "rotation": "daily",
-      "templateName": "Daily Elimination",
       "questCount": 2,
 
       "namePool": [
@@ -179,9 +177,7 @@
     // ---- Weekly Handover Template ----
     {
       "id": "aabbccdd112233440000bb02",
-      "traderId": "aabbccdd11223344eeff5566",
       "rotation": "weekly",
-      "templateName": "Weekly Collection",
       "questCount": 1,
 
       "namePool": [

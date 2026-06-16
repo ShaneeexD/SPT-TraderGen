@@ -5,6 +5,9 @@ using SPTarkov.Server.Core.Helpers;
 using SPTarkov.Server.Core.Models.Logging;
 using SPTarkov.Server.Core.Models.Spt.Mod;
 using SPTarkov.Server.Core.Models.Utils;
+using SPTarkov.Server.Core.Routers;
+using SPTarkov.Server.Core.Services;
+using TraderGen.Patches;
 using TraderGen.Services;
 using TraderGen.Validation;
 
@@ -31,6 +34,8 @@ public class TraderGenPlugin(
     ModHelper modHelper,
     TraderLoader traderLoader,
     TraderRegistrar traderRegistrar,
+    DatabaseService databaseService,
+    ImageRouter imageRouter,
     WTTServerCommonLib.WTTServerCommonLib wttCommon
 ) : IOnLoad
 {
@@ -98,8 +103,9 @@ public class TraderGenPlugin(
         if (Directory.Exists(questOutputDir))
             Directory.Delete(questOutputDir, true);
 
-        var totalQuests = 0;
+        var totalStoryQuests = 0;
         var questPacksFailed = 0;
+        var allRotatingTemplates = new List<(List<Models.RotatingQuestTemplate> Templates, string TraderId, string PackFolder)>();
 
         foreach (var questPack in questPacks)
         {
@@ -116,39 +122,43 @@ public class TraderGenPlugin(
                 continue;
             }
 
-            // Collect story quests
-            var allQuests = new List<Models.StoryQuestDefinition>(questPack.Definition.StoryQuests);
+            // Collect story quests only (rotating quests now use the repeatable system)
+            var storyQuests = new List<Models.StoryQuestDefinition>(questPack.Definition.StoryQuests);
 
-            // Resolve rotating quests (load cached or generate new, with expiration tracking)
+            // Collect rotating quest templates for later processing via Harmony patch
             if (questPack.Definition.RotatingQuests.Count > 0)
             {
-                var rotatingQuests = RotatingQuestService.ResolveRotatingQuests(
-                    questPack.Definition.RotatingQuests,
-                    questPack.TraderId,
-                    modPath,
-                    logger);
-                allQuests.AddRange(rotatingQuests);
+                allRotatingTemplates.Add((questPack.Definition.RotatingQuests, questPack.TraderId, questPack.PackFolder));
             }
 
-            // Build BSG-format quest files for WTT lib
-            var count = QuestBuilder.BuildQuestFiles(
-                questPack.TraderId, allQuests, questOutputDir,
-                questPack.PackFolder, questPack.Definition.DefaultQuestIcon, logger);
-            if (count > 0)
-                totalQuests += count;
-            else
-                questPacksFailed++;
+            // Build BSG-format quest files for WTT lib (story quests only)
+            if (storyQuests.Count > 0)
+            {
+                var count = QuestBuilder.BuildQuestFiles(
+                    questPack.TraderId, storyQuests, questOutputDir,
+                    questPack.PackFolder, questPack.Definition.DefaultQuestIcon, logger);
+                if (count > 0)
+                    totalStoryQuests += count;
+                else
+                    questPacksFailed++;
+            }
         }
 
-        if (totalQuests > 0)
+        if (totalStoryQuests > 0)
         {
-            // Use WTT library to register the generated quests into the SPT database
+            // Use WTT library to register the generated story quests into the SPT database
             var assembly = Assembly.GetExecutingAssembly();
             await wttCommon.CustomQuestService.CreateCustomQuests(assembly);
 
             logger.LogWithColor(
-                $"[TraderGen] Registered {totalQuests} quest(s) via WTT CustomQuestService.",
+                $"[TraderGen] Registered {totalStoryQuests} story quest(s) via WTT CustomQuestService.",
                 LogTextColor.Green);
+        }
+
+        // Process rotating quests via the repeatable quest system (Harmony patch)
+        if (allRotatingTemplates.Count > 0)
+        {
+            SetupRepeatableQuests(allRotatingTemplates);
         }
 
         if (questPacksFailed > 0)
@@ -157,5 +167,57 @@ public class TraderGenPlugin(
                 $"[TraderGen] {questPacksFailed} quest pack(s) failed validation or building.",
                 LogTextColor.Yellow);
         }
+    }
+
+    private void SetupRepeatableQuests(List<(List<Models.RotatingQuestTemplate> Templates, string TraderId, string PackFolder)> allTemplates)
+    {
+        logger.LogWithColor("[TraderGen] Setting up repeatable quests via Harmony patch...", LogTextColor.Cyan);
+
+        // Aggregate all generated repeatable quests across all trader packs
+        var allQuestsByGroup = new Dictionary<string, List<SPTarkov.Server.Core.Models.Eft.Common.Tables.RepeatableQuest>>
+        {
+            ["Daily"] = new(),
+            ["Weekly"] = new(),
+        };
+
+        foreach (var (templates, traderId, packFolder) in allTemplates)
+        {
+            // Register image routes for any template icons
+            var imagePaths = RepeatableQuestGenerator.GetTemplateImagePaths(templates, packFolder);
+            foreach (var (routePath, absFilePath) in imagePaths)
+            {
+                imageRouter.AddRoute(routePath, absFilePath);
+            }
+
+            var questsByGroup = RepeatableQuestGenerator.GenerateRepeatableQuests(templates, traderId, packFolder, logger);
+
+            foreach (var (group, quests) in questsByGroup)
+            {
+                allQuestsByGroup[group].AddRange(quests);
+            }
+        }
+
+        var totalRepeatable = allQuestsByGroup.Values.Sum(g => g.Count);
+        if (totalRepeatable == 0)
+        {
+            logger.LogWithColor("[TraderGen] No repeatable quests generated.", LogTextColor.Yellow);
+            return;
+        }
+
+        // Generate change requirements
+        var changeRequirements = RepeatableQuestGenerator.GenerateChangeRequirements(allQuestsByGroup);
+
+        // Pass quest data to the Harmony patch
+        GetRepeatableQuestsPatch.SetQuestsToInject(allQuestsByGroup, changeRequirements);
+
+        // Enable the Harmony patch
+        new GetRepeatableQuestsPatch().Enable();
+
+        // Register locale entries for the repeatable quests
+        RepeatableQuestLocaleRegistrar.RegisterLocales(databaseService, logger);
+
+        logger.LogWithColor(
+            $"[TraderGen] Registered {totalRepeatable} repeatable quest(s) (Daily: {allQuestsByGroup["Daily"].Count}, Weekly: {allQuestsByGroup["Weekly"].Count}).",
+            LogTextColor.Green);
     }
 }

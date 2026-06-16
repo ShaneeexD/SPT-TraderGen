@@ -173,23 +173,16 @@ public class ItemReward
 // ==================== Rotating Quest Templates ====================
 
 // A template used to generate daily/weekly rotating quests at server startup.
+// The traderId is inherited from the trader pack and not specified per-template.
 public class RotatingQuestTemplate
 {
-    // Unique template ID. Used as a prefix for generated quest IDs.
+    // Unique template ID (24-char hex). Used to track and identify this template.
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
-
-    // The trader ID that gives generated quests.
-    [JsonPropertyName("traderId")]
-    public string TraderId { get; set; } = string.Empty;
 
     // Rotation type: "daily" or "weekly".
     [JsonPropertyName("rotation")]
     public string Rotation { get; set; } = "daily";
-
-    // Template name for logging purposes.
-    [JsonPropertyName("templateName")]
-    public string TemplateName { get; set; } = string.Empty;
 
     // Pool of possible quest names. Use {location} placeholder to insert the map name.
     [JsonPropertyName("namePool")]
@@ -206,6 +199,11 @@ public class RotatingQuestTemplate
     // How rewards scale based on objective difficulty.
     [JsonPropertyName("rewardScaling")]
     public RewardScaling RewardScaling { get; set; } = new();
+
+    // Quest icon image (relative path from pack folder, e.g. "assets/tpl_abc123.jpg").
+    // If not set, falls back to the default repeatable quest icon.
+    [JsonPropertyName("image")]
+    public string? Image { get; set; }
 
     // How many quests to generate from this template at server start. Default 1.
     [JsonPropertyName("questCount")]

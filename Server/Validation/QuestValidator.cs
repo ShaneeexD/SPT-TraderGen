@@ -231,15 +231,14 @@ public static class QuestValidator
     {
         // ID
         if (string.IsNullOrWhiteSpace(template.Id))
-            errors.Add($"{prefix}: 'id' is required.");
-        else if (!seenIds.Add(template.Id))
-            errors.Add($"{prefix}: Duplicate template ID '{template.Id}'.");
-
-        // Trader
-        if (string.IsNullOrWhiteSpace(template.TraderId))
-            errors.Add($"{prefix}: 'traderId' is required.");
-        else if (template.TraderId != traderId)
-            errors.Add($"{prefix}: 'traderId' ({template.TraderId}) doesn't match the trader pack's trader ID ({traderId}).");
+            errors.Add($"{prefix}: 'id' is required. Use a unique 24-character hex string.");
+        else
+        {
+            if (template.Id.Length != 24 || !IsHexString(template.Id))
+                errors.Add($"{prefix}: 'id' must be a 24-character hex string. Got: '{template.Id}'");
+            if (!seenIds.Add(template.Id))
+                errors.Add($"{prefix}: Duplicate template ID '{template.Id}'.");
+        }
 
         // Rotation
         if (!ValidRotations.Contains(template.Rotation))

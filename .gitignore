@@ -56,6 +56,7 @@ Tool/.vite/
 
 # References (not part of the project)
 ref/
+TestTraderWQuest/
 
 # Temp files generated during trader registration
 .tradergen_base_*.json

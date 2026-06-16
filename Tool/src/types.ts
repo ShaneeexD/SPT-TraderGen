@@ -108,21 +108,24 @@ export interface RewardItem {
 }
 
 export interface RotatingQuestTemplate {
-  templateId: string
-  namePattern: string
-  descriptionPattern: string
-  rotationType: string
-  objectiveTemplates: ObjectiveTemplate[]
-  locationPool: string[]
+  id: string
+  rotation: string
+  namePool: string[]
+  descriptionPool: string[]
+  objectives: RotatingObjectiveTemplate[]
   rewardScaling: RewardScaling
+  image?: string
+  imageDataUrl?: string  // Tool-only: holds the drag-and-drop image data
+  questCount: number
 }
 
-export interface ObjectiveTemplate {
+export interface RotatingObjectiveTemplate {
   type: string
-  countMin: number
-  countMax: number
-  target?: string
-  itemPool?: string[]
+  countRange: { min: number; max: number }
+  targetPool: string[]
+  locationPool: string[]
+  itemPool: string[]
+  foundInRaid: boolean
 }
 
 export interface RewardScaling {
@@ -264,12 +267,11 @@ export function createDefaultObjective(): QuestObjective {
 
 export function createDefaultRotatingTemplate(): RotatingQuestTemplate {
   return {
-    templateId: generateMongoId(),
-    namePattern: 'Cleanup {location}',
-    descriptionPattern: 'Head to {location} and deal with the threat.',
-    rotationType: 'daily',
-    objectiveTemplates: [{ type: 'kill_enemy', countMin: 3, countMax: 10, target: 'Savage' }],
-    locationPool: ['bigmap', 'factory4_day', 'Woods'],
+    id: generateMongoId(),
+    rotation: 'daily',
+    namePool: ['Cleanup {location}'],
+    descriptionPool: ['Head to {location} and deal with the threat.'],
+    objectives: [createDefaultRotatingObjective()],
     rewardScaling: {
       xpPerObjectiveCount: 500,
       baseMoney: 20000,
@@ -277,11 +279,19 @@ export function createDefaultRotatingTemplate(): RotatingQuestTemplate {
       currency: 'RUB',
       standing: 0.01,
     },
+    questCount: 1,
   }
 }
 
-export function createDefaultObjectiveTemplate(): ObjectiveTemplate {
-  return { type: 'kill_enemy', countMin: 3, countMax: 10, target: 'Savage' }
+export function createDefaultRotatingObjective(): RotatingObjectiveTemplate {
+  return {
+    type: 'kill_enemy',
+    countRange: { min: 3, max: 10 },
+    targetPool: ['Savage'],
+    locationPool: ['bigmap', 'factory4_day', 'Woods'],
+    itemPool: [],
+    foundInRaid: false,
+  }
 }
 
 export function generateMongoId(): string {

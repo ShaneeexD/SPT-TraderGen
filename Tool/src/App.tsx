@@ -135,6 +135,14 @@ export default function App() {
         }
       }
     }
+    for (const t of questPack.rotatingQuests) {
+      if (t.imageDataUrl) {
+        const match = t.imageDataUrl.match(/^data:image\/\w+;base64,(.+)$/)
+        if (match) {
+          zip.file(`${basePath}/assets/tpl_${t.id}.jpg`, match[1], { base64: true })
+        }
+      }
+    }
 
     const blob = await zip.generateAsync({ type: 'blob' })
     saveAs(blob, `${packName}.zip`)
@@ -142,7 +150,7 @@ export default function App() {
     setTimeout(() => setShowExportSuccess(false), 3000)
   }, [trader, validate])
 
-  const importFromJson = useCallback((jsonStr: string, packName?: string, avatarDataUrl?: string, questJsonStr?: string, questIconDataUrl?: string, perQuestIconDataUrls?: Map<string, string>) => {
+  const importFromJson = useCallback((jsonStr: string, packName?: string, avatarDataUrl?: string, questJsonStr?: string, questIconDataUrl?: string, perQuestIconDataUrls?: Map<string, string>, perTemplateIconDataUrls?: Map<string, string>) => {
     try {
       const raw = jsonStr
         .replace(/\/\/.*$/gm, '')   // strip single-line comments
@@ -184,6 +192,16 @@ export default function App() {
               return q
             })
           }
+          // Match rotating template icons by template ID
+          if (perTemplateIconDataUrls && perTemplateIconDataUrls.size > 0 && pack.rotatingQuests) {
+            pack.rotatingQuests = pack.rotatingQuests.map(t => {
+              const iconUrl = perTemplateIconDataUrls.get(t.id)
+              if (iconUrl) {
+                return { ...t, imageDataUrl: iconUrl }
+              }
+              return t
+            })
+          }
           setQuestPack(pack)
         } catch {
           console.warn('Failed to parse quests.json from import')
@@ -213,6 +231,7 @@ export default function App() {
           let questFile: JSZip.JSZipObject | null = null
           let questIconFile: JSZip.JSZipObject | null = null
           const perQuestIcons: Map<string, JSZip.JSZipObject> = new Map()
+          const perTemplateIcons: Map<string, JSZip.JSZipObject> = new Map()
           let packName = ''
 
           for (const [path, entry] of Object.entries(zip.files)) {
@@ -240,6 +259,11 @@ export default function App() {
             const questIconMatch = path.match(/assets\/quest_([0-9a-fA-F]{24})\.png$/)
             if (questIconMatch) {
               perQuestIcons.set(questIconMatch[1], entry)
+            }
+            // Match rotating quest template icons: assets/tpl_{24-char-hex}.jpg
+            const tplIconMatch = path.match(/assets\/tpl_([0-9a-fA-F]{24})\.(jpg|jpeg|png)$/)
+            if (tplIconMatch) {
+              perTemplateIcons.set(tplIconMatch[1], entry)
             }
           }
 
@@ -270,8 +294,16 @@ export default function App() {
             const base64 = await entry.async('base64')
             perQuestIconDataUrls.set(questId, `data:image/png;base64,${base64}`)
           }
+          // Resolve rotating template icon data URLs
+          const perTemplateIconDataUrls: Map<string, string> = new Map()
+          for (const [tplId, entry] of perTemplateIcons) {
+            const base64 = await entry.async('base64')
+            const ext = entry.name.split('.').pop()?.toLowerCase() || 'jpg'
+            const mime = ext === 'png' ? 'image/png' : 'image/jpeg'
+            perTemplateIconDataUrls.set(tplId, `data:${mime};base64,${base64}`)
+          }
 
-          importFromJson(jsonStr, packName || undefined, avatarDataUrl, questJsonStr, questIconDataUrl, perQuestIconDataUrls)
+          importFromJson(jsonStr, packName || undefined, avatarDataUrl, questJsonStr, questIconDataUrl, perQuestIconDataUrls, perTemplateIconDataUrls)
         } catch {
           alert('Failed to read ZIP file.')
         }
