@@ -40,7 +40,7 @@ public static class RepeatableQuestLocaleRegistrar
                 // Register objective/condition text entries
                 foreach (var (conditionId, text) in conditionLocales)
                 {
-                    dict.TryAdd($"{conditionId} text", text);
+                    dict.TryAdd(conditionId, text);
                 }
 
                 return dict;

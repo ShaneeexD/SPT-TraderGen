@@ -642,30 +642,6 @@ function ObjectiveEditor({ objective, onChange }: {
         )}
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onChange({ useAutoCounter: !objective.useAutoCounter })}
-            className={`w-10 h-5 rounded-full transition-colors relative ${
-              objective.useAutoCounter ? 'bg-tarkov-accent' : 'bg-tarkov-border'
-            }`}
-          >
-            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-              objective.useAutoCounter ? 'left-5' : 'left-0.5'
-            }`} />
-          </button>
-          <span className="text-xs text-tarkov-text-dim flex items-center gap-1">
-            Show Counter
-            <span className="relative group">
-              <HelpCircle size={11} className="text-tarkov-text-dim hover:text-tarkov-accent cursor-help transition-colors" />
-              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-tarkov-bg border border-tarkov-border rounded-lg text-xs text-tarkov-text font-normal w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50 shadow-xl leading-relaxed pointer-events-none">
-                Shows a progress counter (e.g. 3/15) in the quest UI. Recommended for objectives with count &gt; 1.
-              </span>
-            </span>
-          </span>
-        </div>
-      </div>
-
       <Field label="Custom Description (optional)" tooltip="Override the auto-generated objective text with your own.">
         <input className="input-field text-sm" value={objective.description || ''}
           onChange={e => onChange({ description: e.target.value || undefined })}

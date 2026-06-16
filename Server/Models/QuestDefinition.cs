@@ -246,16 +246,6 @@ public class RotatingObjectiveTemplate
     public CountRange CountRange { get; set; } = new();
 }
 
-// Min/max range for random count generation.
-public class CountRange
-{
-    [JsonPropertyName("min")]
-    public int Min { get; set; } = 1;
-
-    [JsonPropertyName("max")]
-    public int Max { get; set; } = 5;
-}
-
 // How rewards scale based on the generated objective values.
 public class RewardScaling
 {
@@ -279,3 +269,14 @@ public class RewardScaling
     [JsonPropertyName("standing")]
     public double Standing { get; set; } = 0.01;
 }
+
+// Min/max range for random count generation.
+public class CountRange
+{
+    [JsonPropertyName("min")]
+    public int Min { get; set; } = 1;
+
+    [JsonPropertyName("max")]
+    public int Max { get; set; } = 5;
+}
+

@@ -253,7 +253,6 @@ export function buildQuestExportJson(pack: QuestPackDefinition): object | null {
           if (obj.location) o.location = obj.location
           if (obj.itemTpl) o.itemTpl = obj.itemTpl
           if (obj.description) o.description = obj.description
-          if (obj.useAutoCounter !== undefined) o.useAutoCounter = obj.useAutoCounter
           return o
         }),
         rewards: buildRewardsJson(q.rewards),

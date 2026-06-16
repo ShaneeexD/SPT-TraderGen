@@ -86,7 +86,6 @@ export interface QuestObjective {
   location?: string
   itemTpl?: string
   description?: string
-  useAutoCounter?: boolean
 }
 
 export interface QuestRewards {
@@ -262,7 +261,7 @@ export function createDefaultStoryQuest(traderId: string): StoryQuestDefinition 
 }
 
 export function createDefaultObjective(): QuestObjective {
-  return { type: 'kill_enemy', count: 5, target: 'Savage', useAutoCounter: true }
+  return { type: 'kill_enemy', count: 5, target: 'Savage' }
 }
 
 export function createDefaultRotatingTemplate(): RotatingQuestTemplate {

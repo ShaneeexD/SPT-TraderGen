@@ -62,6 +62,22 @@ public static class QuestBuilder
         var questAssortSuccess = new JsonObject();
         var count = 0;
 
+        // Location name locale entries — the client looks up "{locationId} Name" for the map label
+        allLocales["any Name"] = "Any location";
+        allLocales["bigmap Name"] = "Customs";
+        allLocales["factory4_day Name"] = "Factory (Day)";
+        allLocales["factory4_night Name"] = "Factory (Night)";
+        allLocales["Woods Name"] = "Woods";
+        allLocales["Shoreline Name"] = "Shoreline";
+        allLocales["Interchange Name"] = "Interchange";
+        allLocales["Lighthouse Name"] = "Lighthouse";
+        allLocales["Reserve Name"] = "Reserve";
+        allLocales["RezervBase Name"] = "Reserve";
+        allLocales["laboratory Name"] = "The Lab";
+        allLocales["TarkovStreets Name"] = "Streets of Tarkov";
+        allLocales["Sandbox Name"] = "Ground Zero";
+        allLocales["sandbox_high Name"] = "Ground Zero (High Level)";
+
         foreach (var quest in allStoryQuests)
         {
             // Resolve quest icon: per-quest image > pack default > generated placeholder
@@ -75,9 +91,9 @@ public static class QuestBuilder
         // Write files
         var jsonOpts = new JsonSerializerOptions { WriteIndented = true };
 
-        var questsFilePath = Path.Combine(questsDir, "quests.json");
-        File.WriteAllText(questsFilePath, allQuests.ToJsonString(jsonOpts));
-        logger.LogWithColor($"[TraderGen] DEBUG: Wrote quest file → {questsFilePath}", LogTextColor.Yellow);
+        File.WriteAllText(
+            Path.Combine(questsDir, "quests.json"),
+            allQuests.ToJsonString(jsonOpts));
 
         File.WriteAllText(
             Path.Combine(localesDir, "en.json"),
@@ -234,7 +250,7 @@ public static class QuestBuilder
         {
             ["conditionType"] = "HandoverItem",
             ["dogtagLevel"] = 0,
-            ["dynamicLocale"] = obj.UseAutoCounter,
+            ["dynamicLocale"] = false,
             ["globalQuestCounterId"] = "",
             ["id"] = condId,
             ["index"] = index,
@@ -332,7 +348,7 @@ public static class QuestBuilder
                 ["id"] = counterId,
             },
             ["doNotResetIfCounterCompleted"] = false,
-            ["dynamicLocale"] = obj.UseAutoCounter,
+            ["dynamicLocale"] = false,
             ["globalQuestCounterId"] = "",
             ["id"] = condId,
             ["index"] = index,
@@ -383,7 +399,7 @@ public static class QuestBuilder
                 ["id"] = counterId,
             },
             ["doNotResetIfCounterCompleted"] = false,
-            ["dynamicLocale"] = obj.UseAutoCounter,
+            ["dynamicLocale"] = false,
             ["globalQuestCounterId"] = "",
             ["id"] = condId,
             ["index"] = index,

@@ -263,7 +263,7 @@ public static class RepeatableQuestGenerator
         return new QuestCondition
         {
             Id = conditionId,
-            DynamicLocale = true,
+            DynamicLocale = false,
             ConditionType = "CounterCreator",
             CompareMethod = ">=",
             Value = count,
@@ -290,7 +290,7 @@ public static class RepeatableQuestGenerator
         return new QuestCondition
         {
             Id = conditionId,
-            DynamicLocale = true,
+            DynamicLocale = false,
             ConditionType = "HandoverItem",
             CompareMethod = ">=",
             Value = count,
@@ -333,7 +333,7 @@ public static class RepeatableQuestGenerator
         return new QuestCondition
         {
             Id = conditionId,
-            DynamicLocale = true,
+            DynamicLocale = false,
             ConditionType = "CounterCreator",
             CompareMethod = ">=",
             Value = count,
