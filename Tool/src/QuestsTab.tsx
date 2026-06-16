@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
   Plus, Trash2, ChevronDown, ChevronUp, RefreshCw, Target, Crosshair,
   Clock, MapPin, HelpCircle, AlertCircle, Upload, Image as ImageIcon,
@@ -8,6 +8,7 @@ import type {
   QuestPackDefinition, StoryQuestDefinition, QuestObjective, QuestRewards,
   RotatingQuestTemplate, RotatingObjectiveTemplate, ValidationError,
 } from './types'
+import { useItemNames } from './useItemNames'
 import {
   createDefaultStoryQuest, createDefaultObjective, createDefaultRotatingTemplate,
   createDefaultRotatingObjective, generateMongoId,
@@ -350,6 +351,12 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, errors }: {
 }) {
   const [expandedObj, setExpandedObj] = useState<number | null>(null)
 
+  const itemTpls = useMemo(
+    () => quest.objectives.map(o => o.itemTpl).filter(Boolean) as string[],
+    [quest.objectives.map(o => o.itemTpl).join(',')]
+  )
+  const itemNames = useItemNames(itemTpls)
+
   const addObjective = () => {
     onChange({ objectives: [...quest.objectives, createDefaultObjective()] })
     setExpandedObj(quest.objectives.length)
@@ -491,6 +498,9 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, errors }: {
                     {isExp ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     <span className="text-sm text-tarkov-text">{typeLabel}</span>
                     <span className="text-xs text-tarkov-text-dim">×{obj.count}</span>
+                    {obj.itemTpl && itemNames.get(obj.itemTpl) && (
+                      <span className="text-xs text-tarkov-text italic">{itemNames.get(obj.itemTpl)}</span>
+                    )}
                     {obj.location && (
                       <span className="text-xs text-tarkov-text-dim">
                         on {MAP_LOCATIONS.find(l => l.value === obj.location)?.label || obj.location}
@@ -658,6 +668,12 @@ function RotatingTemplateEditor({ template, onChange, errors }: {
   onChange: (updates: Partial<RotatingQuestTemplate>) => void
   errors: ValidationError[]
 }) {
+  const allItemTpls = useMemo(
+    () => [...new Set(template.objectives.flatMap(o => o.itemPool).filter(Boolean))],
+    [template.objectives.flatMap(o => o.itemPool).join(',')]
+  )
+  const itemNames = useItemNames(allItemTpls)
+
   const addObjective = () => {
     onChange({ objectives: [...template.objectives, createDefaultRotatingObjective()] })
   }
@@ -838,6 +854,16 @@ function RotatingTemplateEditor({ template, onChange, errors }: {
                   <textarea className="input-field min-h-[40px] resize-y text-xs font-mono" value={obj.itemPool.join('\n')}
                     onChange={e => updateObjective(oi, { itemPool: e.target.value.split('\n').filter(s => s.trim()) })}
                     placeholder="5449016a4bdc2d6f028b456f" />
+                  {obj.itemPool.some(id => itemNames.get(id)) && (
+                    <div className="mt-1 space-y-0.5">
+                      {obj.itemPool.map(id => itemNames.get(id) ? (
+                        <p key={id} className="text-xs text-tarkov-text-dim font-mono">
+                          <span className="text-tarkov-text-dim">{id}</span>
+                          <span className="text-tarkov-text italic ml-2">{itemNames.get(id)}</span>
+                        </p>
+                      ) : null)}
+                    </div>
+                  )}
                   <p className="text-xs text-tarkov-text-dim mt-1">
                     Find item IDs at{' '}
                     <a href="https://db.sp-tarkov.com/search" target="_blank" rel="noopener noreferrer"
