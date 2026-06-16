@@ -1,57 +1,60 @@
 # TraderGen — Custom Trader Framework for SPTarkov 4.0.13
 
-A dependency/framework mod that lets anyone, including **non-programmers** create custom traders for SPTarkov using simple JSON files. Includes a web-based TraderGen Tool for generating trader packs visually.
+A dependency/framework mod that lets anyone, including **non-programmers**, create custom traders for SPTarkov using simple JSON files. Includes a web-based TraderGen Tool for generating trader packs visually.
 
 ## Overview
 
 TraderGen has two parts:
 
 1. **TraderGen Mod** (SPT server mod) — Reads trader pack JSON files at startup and registers them into the SPT database
-2. **TraderGen Tool** (web app) — A visual editor for creating trader packs without writing code
+2. **TraderGen Tool** (web app) — A visual editor for creating trader packs without writing any code
+
+**Tool URL**: https://tradergen-tool.netlify.app
+
+---
 
 ## Quick Start
 
 ### For Players (Installing a Trader Pack)
 
-1. Install the TraderGen mod (Drag the `SPT` folder into your SPT main directory)
-2. Place the trader pack folder into `user/mods/TraderGen/traders/`, it may also be pre-packaged so you can simply drag the `SPT` folder into the main directory, as done with the TraderGen mod
-3. Start the SPT server — the trader appears automatically
+1. Install the TraderGen mod by dragging the `SPT` folder into your SPT install directory
+2. If the trader pack is pre-packaged as an `SPT/` folder structure, drag it in the same way — it drops into the right place automatically
+3. Otherwise, place the trader pack folder into `SPT/user/mods/TraderGen/traders/`
+4. Start the SPT server — the trader appears automatically
 
 ### For Creators (Making a Trader Pack)
 
-1. Open the **TraderGen Tool** here: https://tradergen-tool.netlify.app
-2. Fill in trader details, add items, configure loyalty levels
-3. Click **Export** to download your trader pack
-4. Test by placing the exported folder in `user/mods/TraderGen/traders/`
-5. Publish your pack — users just need TraderGen installed as a dependency
+1. Open the **TraderGen Tool**: https://tradergen-tool.netlify.app
+2. Fill in trader details, loyalty levels, assort items, and optionally add quests
+3. Click **Export** — the tool packages everything into a ready-to-use zip
+4. Extract the zip and drag the `SPT` folder into your SPT install directory to test
+5. Publish your pack — users only need TraderGen installed as a dependency
 
-## Installation (Server Mod)
+---
+
+## Export Format
+
+The TraderGen Tool export zip is pre-packaged and ready to drag straight into any SPT install:
 
 ```
 SPT/
 └── user/
     └── mods/
         └── TraderGen/
-            ├── TraderGen.dll          # The compiled mod
-            └── traders/               # Trader packs go here
-                └── MyTraderPack/
-                    ├── trader.json    # Trader definition
+            └── traders/
+                └── YourTraderName/
+                    ├── trader.json      # Trader identity, loyalty levels, assort
+                    ├── quests.json      # Optional: story and rotating quests
                     └── assets/
-                        └── avatar.jpg # Trader image
+                        ├── avatar.jpg   # Trader portrait
+                        └── tpl_*.jpg    # Optional: custom quest icons
 ```
 
-## Trader Pack Structure
+If the pack has no quests defined, `quests.json` is omitted. All paths are pre-configured — no manual editing needed.
 
-A trader pack is a folder containing:
+---
 
-```
-MyTraderPack/
-├── trader.json        # Required: trader definition
-└── assets/
-    └── avatar.jpg     # Optional: square trader portrait
-```
-
-## JSON Schema
+## Trader Pack JSON (`trader.json`)
 
 ```jsonc
 {
@@ -70,11 +73,11 @@ MyTraderPack/
   // Optional: Full display name (default: "nickname lastName")
   "fullName": "Viktor Kozlov",
 
-  // Optional: Location text (default: "Unknown")
+  // Optional: Location text shown on trader screen
   "location": "Customs Warehouse",
 
   // Optional: Description text
-  "description": "A reliable trader specializing in military surplus.",
+  "description": "A reliable trader specialising in military surplus.",
 
   // Required: Relative path to avatar image
   "avatar": "assets/avatar.jpg",
@@ -82,7 +85,7 @@ MyTraderPack/
   // Optional: Default currency — "RUB", "USD", or "EUR" (default: "RUB")
   "currency": "RUB",
 
-  // Optional: Unlocked from start (default: true)
+  // Optional: Unlocked from game start (default: true)
   "unlockedByDefault": true,
 
   // Optional: Can buy items from player (default: true)
@@ -157,54 +160,204 @@ MyTraderPack/
 }
 ```
 
+Find item template IDs at: https://db.sp-tarkov.com/search
+
+---
+
+## Quest Pack JSON (`quests.json`)
+
+Quests are defined in a separate `quests.json` alongside `trader.json`. Two quest types are supported.
+
+```jsonc
+{
+  "storyQuests": [ /* see below */ ],
+  "rotatingQuests": [ /* see below */ ],
+
+  // Optional: Default quest icon for all quests in this pack (relative to pack folder)
+  "defaultQuestIcon": "assets/my_icon.jpg"
+}
+```
+
+### Story Quests
+
+Fixed, hand-authored quests that appear permanently in the trader's quest list.
+
+```jsonc
+{
+  "id": "aabbccdd11223344eeff0001",       // Unique 24-char hex ID
+  "traderId": "aabbccdd11223344eeff5566",
+  "name": "Supply Run",
+  "description": "We need supplies. Go get them.",
+  "successMessage": "Good work. Here's your cut.",
+  "startedMessage": "Get it done.",
+  "location": "bigmap",                   // Map ID, or "any" for no map restriction
+  "requirements": {
+    "playerLevel": 5,
+    "previousQuest": "aabbccdd11223344eeff0000"  // Optional: must complete this quest first
+  },
+  "objectives": [
+    // Kill objective
+    {
+      "type": "kill_enemy",
+      "count": 10,
+      "target": "Savage",                 // "Savage", "pmcBot", "exUsec", "Bear", "Usec"
+      "location": "bigmap"                // Optional: restrict kills to a specific map
+    },
+    // Handover objective
+    {
+      "type": "handover_item",
+      "count": 3,
+      "itemTpl": "590c678286f77426c9660122",
+      "description": "Hand over 3 of the item"  // Optional: override auto-generated text
+    },
+    // Found-in-raid handover
+    {
+      "type": "handover_fir_item",
+      "count": 1,
+      "itemTpl": "590c678286f77426c9660122"
+    },
+    // Survive and extract
+    {
+      "type": "survive_location",
+      "count": 2,
+      "location": "Woods"
+    }
+  ],
+  "rewards": {
+    "xp": 5000,
+    "money": { "currency": "RUB", "amount": 50000 },
+    "traderStanding": 0.02,
+    "items": [
+      { "itemTpl": "590c678286f77426c9660122", "count": 1 }
+    ],
+    "unlockAssortItems": [
+      "590c5d4b86f774784e1b9c45"      // Unlocks an assort item on quest completion
+    ]
+  },
+
+  // Optional: Custom quest icon (relative to pack folder)
+  "image": "assets/tpl_aabbccdd11223344eeff0001.jpg"
+}
+```
+
+**Supported map IDs**: `any`, `bigmap` (Customs), `factory4_day`, `factory4_night`, `Woods`, `Shoreline`, `Interchange`, `Lighthouse`, `Reserve`, `RezervBase`, `laboratory`, `TarkovStreets`, `Sandbox`, `sandbox_high`
+
+### Rotating Quests
+
+Template-based quests that are procedurally generated fresh each server start and appear in the trader's daily/weekly repeatable quest pool.
+
+Objectives are generated randomly from the pools you define. Rewards (XP, money, standing) scale with the randomly generated objective counts according to the `rewardScaling` values you set.
+
+```jsonc
+{
+  "id": "aabbccdd11223344eeff0010",    // Unique 24-char hex ID for the template
+  "rotation": "daily",                 // "daily" or "weekly"
+  "questCount": 1,                     // How many quests to generate from this template per cycle
+
+  // Name and description pools — one entry is picked randomly per generation.
+  // Use {location} as a placeholder — it is replaced with the chosen map name.
+  "namePool": [
+    "Cleanup {location}",
+    "Eliminate Threats at {location}"
+  ],
+  "descriptionPool": [
+    "Head to {location} and deal with the threat.",
+    "Eliminate targets at {location} for a reward."
+  ],
+
+  "objectives": [
+    // Kill objective template
+    {
+      "type": "kill_enemy",
+      "countRange": { "min": 5, "max": 15 },
+      "targetPool": ["Savage", "pmcBot"],          // One target picked randomly
+      "locationPool": ["bigmap", "Woods", "Shoreline"]  // One map picked randomly
+    },
+    // Handover objective template
+    {
+      "type": "handover_item",
+      "countRange": { "min": 1, "max": 5 },
+      "itemPool": [
+        "590c678286f77426c9660122",
+        "5449016a4bdc2d6f028b456f"
+      ],
+      "foundInRaid": false
+    },
+    // Survive and extract objective template
+    {
+      "type": "survive_location",
+      "countRange": { "min": 1, "max": 3 },
+      "locationPool": ["bigmap", "Woods"]
+    }
+  ],
+
+  // Reward scaling — controls XP, money, and standing given on completion.
+  // Final values scale with the randomly generated objective counts.
+  "rewardScaling": {
+    "xpPerObjectiveCount": 500,         // XP per unit of objective count (e.g. per kill)
+    "baseMoney": 20000,                 // Base money reward before scaling
+    "moneyPerObjectiveCount": 5000,     // Additional money per objective count
+    "currency": "RUB",                  // "RUB", "USD", or "EUR"
+    "standing": 0.01                    // Trader standing gain per completion
+  },
+
+  // Optional: Custom quest icon (relative to pack folder)
+  "image": "assets/tpl_aabbccdd11223344eeff0010.jpg"
+}
+```
+
+**Supported objective types**: `kill_enemy`, `handover_item`, `handover_fir_item`, `survive_location`, `extract_location`
+
+---
+
 ## Publishing a Trader Pack
 
-When publishing your trader pack for others to use:
+The TraderGen Tool export zip is already structured for distribution — users just drag the `SPT` folder into their install directory.
+
+When publishing:
 
 1. **State the dependency**: Your mod requires `com.serenity.tradergen` v1.0.0+
-2. **Include clear instructions**: Tell users to place the pack folder in `user/mods/TraderGen/traders/` or pre-package it as `SPT\user\mods\TraderGen\traders\YourTraderPack` - if you do the second option, make sure not to include the TraderGen DLL or any other mod authors packs.
-3. **Include the avatar image**: Make sure `assets/avatar.jpg` is in the pack
-4. **Test thoroughly**: Start SPT and verify the trader appears with correct items and prices
+2. **Do not include** the TraderGen DLL or other authors' packs in your zip
+3. **Include your assets**: Ensure `assets/avatar.jpg` and any quest icons are present
+4. **Test** by extracting and running the server before publishing
 
-### Example folder layout for distribution:
+### Distribution layout (pre-packaged):
 
 ```
 YourTraderPack.zip
-└── YourTraderName/
-    ├── trader.json
-    └── assets/
-        └── avatar.jpg
+└── SPT/
+    └── user/
+        └── mods/
+            └── TraderGen/
+                └── traders/
+                    └── YourTraderName/
+                        ├── trader.json
+                        ├── quests.json         (if quests are included)
+                        └── assets/
+                            ├── avatar.jpg
+                            └── tpl_*.jpg       (custom quest icons, if any)
 ```
 
-Users drag `YourTraderName/` into `user/mods/TraderGen/traders/`.
+Users extract and drag the `SPT/` folder into their SPT install directory.
 
-OR
-
-```
-SPT/
-└── user/
-    └── mods/
-        └── TraderGen/
-            └── traders/               
-                └── MyTraderPack/      # Your Trader Pack
-                    ├── trader.json    # Trader definition
-                    └── assets/
-                        └── avatar.jpg # Trader image
-```
-Users drag `SPT/` into the main SPT install directory.
+---
 
 ## Validation & Error Handling
 
-TraderGen validates all JSON files on load and provides clear error messages:
+TraderGen validates all JSON files on load and logs clear errors to the server console:
 
-- Missing required fields (id, nickname, firstName, avatar)
+- Missing required fields (`id`, `nickname`, `firstName`, `avatar`)
 - Invalid ID format (must be 24-char hex)
 - Invalid currency values
 - Missing or duplicate loyalty levels
-- Items referencing undefined loyalty levels
+- Assort items referencing undefined loyalty levels
 - Missing prices or barter requirements
+- Invalid quest objective types or map IDs
+- Invalid reward scaling values
 
-If a trader pack has errors, it is **skipped** — other trader packs still load normally. Check the server console for error details.
+If a pack has errors it is **skipped** — other packs still load normally.
+
+---
 
 ## Technical Details
 
@@ -212,6 +365,7 @@ If a trader pack has errors, it is **skipped** — other trader packs still load
 - **Framework**: .NET 9.0, C#
 - **DI Pattern**: `[Injectable]` + `IOnLoad` (runs at `PostDBModLoader + 1`)
 - **NuGet Packages**: `SPTarkov.Common`, `SPTarkov.DI`, `SPTarkov.Server.Core` (4.0.13)
+- **Quest integration**: Story quests via WTT CustomQuests library; rotating quests injected directly into the SPT repeatable quest pool
 
 ## License
 
