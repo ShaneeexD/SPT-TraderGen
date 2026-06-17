@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import {
   Plus, Trash2, ChevronDown, ChevronUp, RefreshCw, Target, Crosshair,
   Clock, MapPin, HelpCircle, AlertCircle, Upload, Image as ImageIcon,
-  Scroll, Repeat, GripVertical, Copy,
+  Scroll, Repeat, GripVertical, Copy, Package,
 } from 'lucide-react'
 import type {
   QuestPackDefinition, StoryQuestDefinition, QuestObjective, QuestRewards,
@@ -349,8 +349,11 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, errors }: {
   const [expandedObj, setExpandedObj] = useState<number | null>(null)
 
   const itemTpls = useMemo(
-    () => quest.objectives.map(o => o.itemTpl).filter(Boolean) as string[],
-    [quest.objectives.map(o => o.itemTpl).join(',')]
+    () => [
+      ...quest.objectives.map(o => o.itemTpl).filter(Boolean),
+      ...(quest.rewards.items || []).map(i => i.itemTpl).filter(Boolean)
+    ] as string[],
+    [quest.objectives.map(o => o.itemTpl).join(','), quest.rewards.items?.map(i => i.itemTpl).join(',')]
   )
   const itemNames = useItemNames(itemTpls)
 
@@ -587,6 +590,81 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, errors }: {
                 step={0.01} min={-1} max={1} />
             </Field>
           </div>
+
+          {/* Item Rewards - compact inline */}
+          <div className="mt-3 flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => {
+                const newItems = [...(quest.rewards.items || []), { itemTpl: '', count: 1 }]
+                updateRewards({ items: newItems })
+              }}
+              className="btn-secondary text-xs flex items-center gap-1 px-2 py-1"
+            >
+              <Plus size={12} /> Add Item
+            </button>
+            <p className="text-xs text-tarkov-text-dim">
+              Find IDs at{' '}
+              <a href="https://db.sp-tarkov.com/search" target="_blank" rel="noopener noreferrer"
+                className="text-tarkov-accent hover:text-tarkov-accent-hover underline">db.sp-tarkov.com</a>
+            </p>
+            {(quest.rewards.items || []).length > 0 && (
+              <span className="text-xs text-tarkov-text-dim">{(quest.rewards.items || []).length} item(s)</span>
+            )}
+          </div>
+
+          {(quest.rewards.items || []).length > 0 && (
+            <div className="mt-2 space-y-1">
+              {(quest.rewards.items || []).map((item, idx) => (
+                <div key={idx} className="flex items-start gap-2 bg-tarkov-bg rounded p-1.5 border border-tarkov-border/50">
+                  <div className="flex-1 min-w-0 max-w-[240px]">
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        className="input-field text-xs font-mono w-full py-1"
+                        value={item.itemTpl}
+                        onChange={e => {
+                          const newItems = [...(quest.rewards.items || [])]
+                          newItems[idx] = { ...item, itemTpl: e.target.value }
+                          updateRewards({ items: newItems })
+                        }}
+                        placeholder="Item TPL ID"
+                        maxLength={24}
+                      />
+                      <TooltipIcon text="Item to be rewarded." />
+                    </div>
+                    {item.itemTpl && itemNames.get(item.itemTpl) && (
+                      <p className="text-xs text-tarkov-accent truncate">{itemNames.get(item.itemTpl)}</p>
+                    )}
+                  </div>
+                  <div className="w-20">
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="1"
+                        className="input-field text-xs w-full text-center py-1"
+                        value={item.count}
+                        onChange={e => {
+                          const newItems = [...(quest.rewards.items || [])]
+                          newItems[idx] = { ...item, count: parseInt(e.target.value) || 1 }
+                          updateRewards({ items: newItems })
+                        }}
+                      />
+                      <TooltipIcon text="Quantity of this item to be rewarded." />
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const newItems = (quest.rewards.items || []).filter((_, i) => i !== idx)
+                      updateRewards({ items: newItems })
+                    }}
+                    className="text-tarkov-error hover:text-tarkov-error/80 p-1 mt-1"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -959,5 +1037,24 @@ function Star({ size, className }: { size: number; className?: string }) {
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
     </svg>
+  )
+}
+
+function TooltipIcon({ text }: { text: string }) {
+  const [show, setShow] = useState(false)
+  return (
+    <div className="relative inline-block">
+      <HelpCircle
+        size={12}
+        className="text-tarkov-text-dim cursor-help"
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+      />
+      {show && (
+        <div className="absolute left-4 bottom-0 bg-tarkov-bg border border-tarkov-border rounded p-2 text-xs text-tarkov-text whitespace-nowrap z-50 shadow-lg">
+          {text}
+        </div>
+      )}
+    </div>
   )
 }
