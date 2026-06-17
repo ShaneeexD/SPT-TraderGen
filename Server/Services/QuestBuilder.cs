@@ -123,7 +123,7 @@ public static class QuestBuilder
             ["conditionType"] = "Level",
             ["dynamicLocale"] = false,
             ["globalQuestCounterId"] = "",
-            ["id"] = GenerateId(),
+            ["id"] = DeriveStableId($"{questId}:start:level"),
             ["index"] = 0,
             ["parentId"] = "",
             ["value"] = quest.Requirements.PlayerLevel,
@@ -140,7 +140,7 @@ public static class QuestBuilder
                 ["dispersion"] = 0,
                 ["dynamicLocale"] = false,
                 ["globalQuestCounterId"] = "",
-                ["id"] = GenerateId(),
+                ["id"] = DeriveStableId($"{questId}:start:quest"),
                 ["index"] = 1,
                 ["parentId"] = "",
                 ["status"] = new JsonArray { 4 }, // 4 = Success
@@ -154,7 +154,7 @@ public static class QuestBuilder
         for (var i = 0; i < quest.Objectives.Count; i++)
         {
             var obj = quest.Objectives[i];
-            var conditionNode = BuildObjectiveCondition(obj, i, locales);
+            var conditionNode = BuildObjectiveCondition(obj, i, locales, questId);
             finishConditions.Add(conditionNode);
         }
 
@@ -215,22 +215,22 @@ public static class QuestBuilder
 
     // Objective builders
 
-    private static JsonNode BuildObjectiveCondition(QuestObjective obj, int index, JsonObject locales)
+    private static JsonNode BuildObjectiveCondition(QuestObjective obj, int index, JsonObject locales, string questId)
     {
         return obj.Type.ToLowerInvariant() switch
         {
-            "handover_item" => BuildHandoverCondition(obj, index, false, locales),
-            "handover_fir_item" => BuildHandoverCondition(obj, index, true, locales),
-            "kill_enemy" => BuildKillCondition(obj, index, locales),
-            "survive_location" => BuildSurviveCondition(obj, index, locales),
-            "extract_location" => BuildExtractCondition(obj, index, locales),
+            "handover_item" => BuildHandoverCondition(obj, index, false, locales, questId),
+            "handover_fir_item" => BuildHandoverCondition(obj, index, true, locales, questId),
+            "kill_enemy" => BuildKillCondition(obj, index, locales, questId),
+            "survive_location" => BuildSurviveCondition(obj, index, locales, questId),
+            "extract_location" => BuildExtractCondition(obj, index, locales, questId),
             _ => throw new InvalidOperationException($"Unknown objective type: {obj.Type}"),
         };
     }
 
-    private static JsonObject BuildHandoverCondition(QuestObjective obj, int index, bool foundInRaid, JsonObject locales)
+    private static JsonObject BuildHandoverCondition(QuestObjective obj, int index, bool foundInRaid, JsonObject locales, string questId)
     {
-        var condId = GenerateId();
+        var condId = DeriveStableId($"{questId}:obj{index}:cond");
 
         // Build locale for this objective
         var firText = foundInRaid ? "found in raid " : "";
@@ -256,11 +256,11 @@ public static class QuestBuilder
         };
     }
 
-    private static JsonObject BuildKillCondition(QuestObjective obj, int index, JsonObject locales)
+    private static JsonObject BuildKillCondition(QuestObjective obj, int index, JsonObject locales, string questId)
     {
-        var condId = GenerateId();
-        var killCondId = GenerateId();
-        var counterId = GenerateId();
+        var condId = DeriveStableId($"{questId}:obj{index}:cond");
+        var killCondId = DeriveStableId($"{questId}:obj{index}:kill");
+        var counterId = DeriveStableId($"{questId}:obj{index}:counter");
 
         // Determine target and savageRole
         var target = obj.Target ?? "Savage";
@@ -312,7 +312,7 @@ public static class QuestBuilder
         // Add location condition
         if (!string.IsNullOrWhiteSpace(obj.Location))
         {
-            var locCondId = GenerateId();
+            var locCondId = DeriveStableId($"{questId}:obj{index}:loc");
             counterConditions.Add(new JsonObject
             {
                 ["conditionType"] = "Location",
@@ -351,12 +351,12 @@ public static class QuestBuilder
         };
     }
 
-    private static JsonObject BuildSurviveCondition(QuestObjective obj, int index, JsonObject locales)
+    private static JsonObject BuildSurviveCondition(QuestObjective obj, int index, JsonObject locales, string questId)
     {
-        var condId = GenerateId();
-        var counterId = GenerateId();
-        var exitCondId = GenerateId();
-        var locCondId = GenerateId();
+        var condId = DeriveStableId($"{questId}:obj{index}:cond");
+        var counterId = DeriveStableId($"{questId}:obj{index}:counter");
+        var exitCondId = DeriveStableId($"{questId}:obj{index}:exit");
+        var locCondId = DeriveStableId($"{questId}:obj{index}:loc");
 
         var counterConditions = new JsonArray
         {
@@ -402,10 +402,10 @@ public static class QuestBuilder
         };
     }
 
-    private static JsonObject BuildExtractCondition(QuestObjective obj, int index, JsonObject locales)
+    private static JsonObject BuildExtractCondition(QuestObjective obj, int index, JsonObject locales, string questId)
     {
         // extract_location is structurally the same as survive_location in BSG format
-        return BuildSurviveCondition(obj, index, locales);
+        return BuildSurviveCondition(obj, index, locales, questId);
     }
 
     // Reward builder
@@ -633,6 +633,14 @@ public static class QuestBuilder
             0x60, 0x82,
         ];
         File.WriteAllBytes(path, pngBytes);
+    }
+
+    // Derive a stable 24-char hex ID from a seed string.
+    // Used for quest condition IDs so objective progress persists across server restarts.
+    private static string DeriveStableId(string seed)
+    {
+        var hash = System.Security.Cryptography.MD5.HashData(System.Text.Encoding.UTF8.GetBytes(seed));
+        return Convert.ToHexStringLower(hash)[..24];
     }
 
     // Generate 24-char hex ID.
