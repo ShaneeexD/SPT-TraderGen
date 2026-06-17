@@ -244,7 +244,7 @@ Fixed, hand-authored quests that appear permanently in the trader's quest list.
 
 ### Rotating Quests
 
-WARNING: This feature is not yet fully implemented and will not work. This will be implemented in a future update.
+### WARNING: This feature is not yet fully implemented and will not work. It will be implemented in a future update.
 
 Template-based quests that are procedurally generated fresh each server start and appear in the trader's daily/weekly repeatable quest pool.
 
