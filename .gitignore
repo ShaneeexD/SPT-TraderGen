@@ -58,6 +58,7 @@ Tool/.vite/
 ref/
 TestTraderWQuest/
 ExampleTrader/ExampleTrader.zip
+FORGE_DESCRIPTION.md
 
 # Temp files generated during trader registration
 .tradergen_base_*.json
