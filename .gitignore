@@ -73,3 +73,6 @@ $RECYCLE.BIN/
 .LSOverride
 *~
 .directory
+
+# Local Netlify folder
+.netlify
