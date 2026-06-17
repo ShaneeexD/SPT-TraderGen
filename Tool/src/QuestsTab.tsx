@@ -701,7 +701,7 @@ function ObjectiveEditor({ objective, onChange }: {
               const t = e.target.value
               const updates: Partial<QuestObjective> = { type: t }
               if (t === 'kill_enemy') { updates.target = 'Savage'; updates.itemTpl = undefined }
-              if (t === 'handover_item' || t === 'handover_fir_item') { updates.target = undefined; updates.itemTpl = '' }
+              if (t === 'handover_item' || t === 'handover_fir_item') { updates.target = undefined; updates.itemTpl = ''; updates.location = undefined }
               if (t === 'survive_location' || t === 'extract_location') { updates.location = 'bigmap'; updates.target = undefined; updates.itemTpl = undefined }
               onChange(updates)
             }}>
