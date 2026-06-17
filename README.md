@@ -2,14 +2,30 @@
 
 A dependency/framework mod that lets anyone, including **non-programmers**, create custom traders for SPTarkov using simple JSON files. Includes a web-based TraderGen Tool for generating trader packs visually.
 
+**Tool URL**: https://tradergen-tool.netlify.app
+
+## Contents
+
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+  - [For Players (Installing a Trader Pack)](#for-players-installing-a-trader-pack)
+  - [For Creators (Making a Trader Pack)](#for-creators-making-a-trader-pack)
+- [Export Format](#export-format)
+- [Trader Pack JSON (`trader.json`)](#trader-pack-json-traderjson)
+- [Quest Pack JSON (`quests.json`)](#quest-pack-json-questsjson)
+  - [Story Quests](#story-quests)
+  - [Rotating Quests](#rotating-quests)
+- [Publishing a Trader Pack](#publishing-a-trader-pack)
+- [Validation & Error Handling](#validation--error-handling)
+- [Technical Details](#technical-details)
+- [License](#license)
+
 ## Overview
 
 TraderGen has two parts:
 
 1. **TraderGen Mod** (SPT server mod) — Reads trader pack JSON files at startup and registers them into the SPT database
 2. **TraderGen Tool** (web app) — A visual editor for creating trader packs without writing any code
-
-**Tool URL**: https://tradergen-tool.netlify.app
 
 ---
 
