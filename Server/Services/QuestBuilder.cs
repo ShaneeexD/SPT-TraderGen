@@ -318,7 +318,7 @@ public static class QuestBuilder
                 ["conditionType"] = "Location",
                 ["dynamicLocale"] = false,
                 ["id"] = locCondId,
-                ["target"] = new JsonArray { obj.Location },
+                ["target"] = BuildLocationTargets(obj.Location),
             });
         }
 
@@ -372,7 +372,7 @@ public static class QuestBuilder
                 ["conditionType"] = "Location",
                 ["dynamicLocale"] = false,
                 ["id"] = locCondId,
-                ["target"] = new JsonArray { obj.Location! },
+                ["target"] = BuildLocationTargets(obj.Location!),
             },
         };
 
@@ -406,6 +406,19 @@ public static class QuestBuilder
     {
         // extract_location is structurally the same as survive_location in BSG format
         return BuildSurviveCondition(obj, index, locales, questId);
+    }
+
+    // Returns a JsonArray of location target strings for counter conditions.
+    // Ground Zero has two variants (Sandbox / sandbox_high) so both are included
+    // to ensure objectives track regardless of player level.
+    private static JsonArray BuildLocationTargets(string location)
+    {
+        var targets = new JsonArray { location };
+        if (string.Equals(location, "Sandbox", StringComparison.OrdinalIgnoreCase))
+            targets.Add("Sandbox_high");
+        else if (string.Equals(location, "Sandbox_high", StringComparison.OrdinalIgnoreCase))
+            targets.Add("Sandbox");
+        return targets;
     }
 
     // Reward builder

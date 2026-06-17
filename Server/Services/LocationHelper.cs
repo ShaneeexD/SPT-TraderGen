@@ -17,7 +17,7 @@ public static class LocationHelper
         ["laboratory"] = "The Lab",
         ["TarkovStreets"] = "Streets of Tarkov",
         ["Sandbox"] = "Ground Zero",
-        ["sandbox_high"] = "Ground Zero (High Level)",
+        ["Sandbox_high"] = "Ground Zero (High Level)",
     };
 
     public static string ToDisplayName(string locationId)
@@ -42,7 +42,7 @@ public static class LocationHelper
         ["Reserve"] = "5704e5fad2720bc05b8b4567", // alias
         ["TarkovStreets"] = "5714dc692459777137212e12",
         ["Sandbox"] = "653e6760052c01c1c805532f",
-        ["sandbox_high"] = "653e6760052c01c1c805532f",
+        ["Sandbox_high"] = "653e6760052c01c1c805532f",
     };
 
     // Converts a location key to the GUID used in quest.Location field.

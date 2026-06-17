@@ -394,12 +394,17 @@ public static class RepeatableQuestGenerator
         // Add location condition
         if (!string.IsNullOrWhiteSpace(location) && location != "any")
         {
+            var locTargets = new List<string> { location };
+            if (string.Equals(location, "Sandbox", StringComparison.OrdinalIgnoreCase))
+                locTargets.Add("Sandbox_high");
+            else if (string.Equals(location, "Sandbox_high", StringComparison.OrdinalIgnoreCase))
+                locTargets.Add("Sandbox");
             counterConditions.Add(new QuestConditionCounterCondition
             {
                 Id = new MongoId(),
                 DynamicLocale = true,
                 ConditionType = "Location",
-                Target = new ListOrT<string>(new List<string> { location }, null),
+                Target = new ListOrT<string>(locTargets, null),
             });
         }
 
@@ -473,12 +478,17 @@ public static class RepeatableQuestGenerator
 
         if (!string.IsNullOrWhiteSpace(location) && location != "any")
         {
+            var locTargets = new List<string> { location };
+            if (string.Equals(location, "Sandbox", StringComparison.OrdinalIgnoreCase))
+                locTargets.Add("Sandbox_high");
+            else if (string.Equals(location, "Sandbox_high", StringComparison.OrdinalIgnoreCase))
+                locTargets.Add("Sandbox");
             counterConditions.Add(new QuestConditionCounterCondition
             {
                 Id = new MongoId(),
                 DynamicLocale = true,
                 ConditionType = "Location",
-                Target = new ListOrT<string>(new List<string> { location }, null),
+                Target = new ListOrT<string>(locTargets, null),
             });
         }
 
