@@ -244,6 +244,8 @@ Fixed, hand-authored quests that appear permanently in the trader's quest list.
 
 ### Rotating Quests
 
+WARNING: This feature is not yet fully implemented and will not work. This will be implemented in a future update.
+
 Template-based quests that are procedurally generated fresh each server start and appear in the trader's daily/weekly repeatable quest pool.
 
 Objectives are generated randomly from the pools you define. Rewards (XP, money, standing) scale with the randomly generated objective counts according to the `rewardScaling` values you set.
