@@ -46,6 +46,8 @@ TraderGen has two parts:
 4. Extract the zip and drag the `SPT` folder into your SPT install directory to test
 5. Publish your pack — users need TraderGen and WTT - CommonLib installed as a dependency
 
+> ⚠️ **Do not rename any files or images after exporting.** The mod references them by their generated names (e.g., `avatar.jpg`, `tpl_*.jpg`) — renaming will break the pack.
+
 ---
 
 ## Export Format
@@ -67,6 +69,8 @@ SPT/
 ```
 
 If the pack has no quests defined, `quests.json` is omitted. All paths are pre-configured — no manual editing needed.
+
+> ⚠️ **Do not rename any exported files.** Asset names (e.g., `avatar.jpg`, `tpl_*.jpg`) are hardcoded in the generated JSON — renaming them will cause missing images in-game.
 
 ---
 
@@ -336,7 +340,7 @@ When publishing:
 
 1. **State the dependencies**: Your mod requires `com.serenity.tradergen` v1.5.0+ and `com.wtt.commonlib` v2.0.20+ (WTT - CommonLib)
 2. **Do not include** the TraderGen/WTT-CommonLib DLL or other authors' packs in your zip
-3. **Include your assets**: Ensure `assets/avatar.jpg` and any quest icons are present
+3. **Include your assets**: Ensure `assets/avatar.jpg` and any quest icons are present — **do not rename them**, the mod references them by their generated names
 4. **Test** by extracting and running the server before publishing
 
 ### Distribution layout (pre-packaged):
