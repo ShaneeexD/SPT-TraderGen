@@ -240,7 +240,7 @@ Fixed, hand-authored quests that appear permanently in the trader's quest list.
 }
 ```
 
-**Supported map IDs**: `any`, `bigmap` (Customs), `factory4_day`, `factory4_night`, `Woods`, `Shoreline`, `Interchange`, `Lighthouse`, `Reserve`, `RezervBase`, `laboratory`, `TarkovStreets`, `Sandbox`, `sandbox_high`
+**Supported map IDs**: `any`, `bigmap` (Customs), `factory4`, `factory4_day`, `factory4_night`, `Woods`, `Shoreline`, `Interchange`, `Lighthouse`, `Reserve`, `RezervBase`, `laboratory`, `TarkovStreets`, `Sandbox`, `Sandbox_high`
 
 ### Rotating Quests
 
