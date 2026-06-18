@@ -1262,7 +1262,7 @@ function FieldErrors({ errors }: { errors: ValidationError[] }) {
 
 const SLOTS_BY_CATEGORY: Record<string, string[]> = {
   'Weapon': ['mod_pistol_grip', 'mod_stock', 'mod_magazine', 'mod_muzzle', 'mod_reciever', 'mod_sight_rear', 'mod_sight_front', 'mod_gas_block', 'mod_handguard', 'mod_foregrip', 'mod_scope', 'mod_tactical', 'mod_bipod', 'mod_launcher', 'mod_nvg', 'mod_mount', 'mod_charge'],
-  'Armour': ['Front_plate', 'Back_plate', 'Left_plate', 'Right_plate', 'Soft_armor_front', 'Soft_armor_back', 'Soft_armor_left', 'Soft_armor_right', 'Groin', 'Groin_back'],
+  'Armour': ['Front_plate', 'Back_plate', 'Left_plate', 'Right_plate', 'Soft_armor_front', 'Soft_armor_back', 'Soft_armor_left', 'Soft_armor_right', 'Groin', 'Groin_back', 'Collar', 'Shoulder_l', 'Shoulder_r'],
   'Helmet': ['Helmet_top', 'Helmet_back', 'Helmet_ears', 'Helmet_visor'],
   'Gear': ['Pockets', 'SecuredContainer', 'Vest', 'Backpack', 'FaceCover', 'Eyewear', 'Earpiece', 'Headwear'],
   'Magazine': ['cartridges'],
