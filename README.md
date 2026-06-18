@@ -338,7 +338,7 @@ The TraderGen Tool export zip is already structured for distribution — users j
 
 When publishing:
 
-1. **State the dependencies**: Your mod requires `com.serenity.tradergen` v1.5.0+ and `com.wtt.commonlib` v2.0.20+ (WTT - CommonLib)
+1. **State the dependencies**: Your mod requires `com.serenity.tradergen` v1.6.0+ and `com.wtt.commonlib` v2.0.20+ (WTT - CommonLib)
 2. **Do not include** the TraderGen/WTT-CommonLib DLL or other authors' packs in your zip
 3. **Include your assets**: Ensure `assets/avatar.jpg` and any quest icons are present — **do not rename them**, the mod references them by their generated names
 4. **Test** by extracting and running the server before publishing
