@@ -368,6 +368,11 @@ namespace TraderGen.Client.Patches
             {
                 try
                 {
+                    if (Plugin.EnableExportButton != null && !Plugin.EnableExportButton.Value)
+                    {
+                        return;
+                    }
+
                     var item = _contextMenuItem;
                     if (item == null)
                     {
