@@ -389,6 +389,11 @@ public static class RepeatableQuestGenerator
             SavageRole = savageRole,
         };
 
+        // TODO: Map advanced kill conditions (minDistance, maxDistance, weaponTpls, wearing, notWearing,
+        //       timeFrom, timeTo, bodyPart) from objTemplate to the typed QuestConditionCounterCondition.
+        //       The SPT typed model properties for these are not confirmed; use JsonObject approach
+        //       (like QuestBuilder) if the typed model does not expose them directly.
+
         var counterConditions = new List<QuestConditionCounterCondition> { killCondition };
 
         // Add location condition

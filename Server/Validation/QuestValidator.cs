@@ -193,6 +193,62 @@ public static class QuestValidator
 
         if (obj.Location != null && !ValidLocations.Contains(obj.Location))
             errors.Add($"{prefix}: Invalid 'location': '{obj.Location}'. Valid: {string.Join(", ", ValidLocations)}");
+
+        // --- Advanced kill condition validation ---
+
+        if (obj.MinDistance.HasValue && obj.MinDistance.Value < 0)
+            errors.Add($"{prefix}: 'minDistance' must be >= 0.");
+
+        if (obj.MaxDistance.HasValue && obj.MaxDistance.Value < 0)
+            errors.Add($"{prefix}: 'maxDistance' must be >= 0.");
+
+        if (obj.MinDistance.HasValue && obj.MaxDistance.HasValue)
+            errors.Add($"{prefix}: Cannot set both 'minDistance' and 'maxDistance'. Use one or the other.");
+
+        if (obj.TimeFrom.HasValue && (obj.TimeFrom.Value < 0 || obj.TimeFrom.Value > 23))
+            errors.Add($"{prefix}: 'timeFrom' must be between 0 and 23.");
+
+        if (obj.TimeTo.HasValue && (obj.TimeTo.Value < 0 || obj.TimeTo.Value > 23))
+            errors.Add($"{prefix}: 'timeTo' must be between 0 and 23.");
+
+        if (obj.WeaponTpls != null)
+        {
+            for (var wi = 0; wi < obj.WeaponTpls.Count; wi++)
+            {
+                var wtpl = obj.WeaponTpls[wi];
+                if (string.IsNullOrWhiteSpace(wtpl) || wtpl.Length != 24 || !IsHexString(wtpl))
+                    errors.Add($"{prefix}: 'weaponTpls[{wi}]' must be a 24-character hex string. Got: '{wtpl}'");
+            }
+        }
+
+        if (obj.Wearing != null)
+        {
+            for (var wi = 0; wi < obj.Wearing.Count; wi++)
+            {
+                var wtpl = obj.Wearing[wi];
+                if (string.IsNullOrWhiteSpace(wtpl) || wtpl.Length != 24 || !IsHexString(wtpl))
+                    errors.Add($"{prefix}: 'wearing[{wi}]' must be a 24-character hex string. Got: '{wtpl}'");
+            }
+        }
+
+        if (obj.NotWearing != null)
+        {
+            for (var wi = 0; wi < obj.NotWearing.Count; wi++)
+            {
+                var wtpl = obj.NotWearing[wi];
+                if (string.IsNullOrWhiteSpace(wtpl) || wtpl.Length != 24 || !IsHexString(wtpl))
+                    errors.Add($"{prefix}: 'notWearing[{wi}]' must be a 24-character hex string. Got: '{wtpl}'");
+            }
+        }
+
+        if (obj.BodyPart != null)
+        {
+            for (var bi = 0; bi < obj.BodyPart.Count; bi++)
+            {
+                if (string.IsNullOrWhiteSpace(obj.BodyPart[bi]))
+                    errors.Add($"{prefix}: 'bodyPart[{bi}]' cannot be empty.");
+            }
+        }
     }
 
     private static void ValidateRewards(QuestRewards rewards, string prefix, List<string> errors)

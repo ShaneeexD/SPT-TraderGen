@@ -173,6 +173,51 @@ export function validateQuestPack(pack: QuestPackDefinition, traderId: string): 
       if ((obj.type === 'survive_location' || obj.type === 'extract_location') && !obj.location) {
         errors.push({ field: `quest.${i}.obj.${j}.location`, message: `${objPrefix}: Location is required.` })
       }
+
+      // Advanced condition validation
+      if (obj.minDistance !== undefined && obj.minDistance !== null && (obj.minDistance < 0 || !Number.isFinite(obj.minDistance))) {
+        errors.push({ field: `quest.${i}.obj.${j}.minDistance`, message: `${objPrefix}: minDistance must be >= 0.` })
+      }
+      if (obj.maxDistance !== undefined && obj.maxDistance !== null && (obj.maxDistance < 0 || !Number.isFinite(obj.maxDistance))) {
+        errors.push({ field: `quest.${i}.obj.${j}.maxDistance`, message: `${objPrefix}: maxDistance must be >= 0.` })
+      }
+      if (obj.minDistance != null && obj.maxDistance != null) {
+        errors.push({ field: `quest.${i}.obj.${j}.minDistance`, message: `${objPrefix}: Cannot set both minDistance and maxDistance at the same time. Use one or the other.` })
+      }
+      if (obj.timeFrom !== undefined && obj.timeFrom !== null && (obj.timeFrom < 0 || obj.timeFrom > 23)) {
+        errors.push({ field: `quest.${i}.obj.${j}.timeFrom`, message: `${objPrefix}: timeFrom must be 0-23.` })
+      }
+      if (obj.timeTo !== undefined && obj.timeTo !== null && (obj.timeTo < 0 || obj.timeTo > 23)) {
+        errors.push({ field: `quest.${i}.obj.${j}.timeTo`, message: `${objPrefix}: timeTo must be 0-23.` })
+      }
+      if (obj.weaponTpls) {
+        for (let wi = 0; wi < obj.weaponTpls.length; wi++) {
+          if (!HEX_24.test(obj.weaponTpls[wi])) {
+            errors.push({ field: `quest.${i}.obj.${j}.weaponTpls[${wi}]`, message: `${objPrefix}: weaponTpls[${wi}] must be a 24-char hex string.` })
+          }
+        }
+      }
+      if (obj.wearing) {
+        for (let wi = 0; wi < obj.wearing.length; wi++) {
+          if (!HEX_24.test(obj.wearing[wi])) {
+            errors.push({ field: `quest.${i}.obj.${j}.wearing[${wi}]`, message: `${objPrefix}: wearing[${wi}] must be a 24-char hex string.` })
+          }
+        }
+      }
+      if (obj.notWearing) {
+        for (let wi = 0; wi < obj.notWearing.length; wi++) {
+          if (!HEX_24.test(obj.notWearing[wi])) {
+            errors.push({ field: `quest.${i}.obj.${j}.notWearing[${wi}]`, message: `${objPrefix}: notWearing[${wi}] must be a 24-char hex string.` })
+          }
+        }
+      }
+      if (obj.bodyPart) {
+        for (let bi = 0; bi < obj.bodyPart.length; bi++) {
+          if (!obj.bodyPart[bi]?.trim()) {
+            errors.push({ field: `quest.${i}.obj.${j}.bodyPart[${bi}]`, message: `${objPrefix}: bodyPart[${bi}] cannot be empty.` })
+          }
+        }
+      }
     }
 
     if (q.rewards.xp < 0) {
@@ -253,6 +298,17 @@ export function buildQuestExportJson(pack: QuestPackDefinition): object | null {
           if (obj.location) o.location = obj.location
           if (obj.itemTpl) o.itemTpl = obj.itemTpl
           if (obj.description) o.description = obj.description
+          if (obj.minDistance != null) o.minDistance = obj.minDistance
+          if (obj.maxDistance != null) o.maxDistance = obj.maxDistance
+          if (obj.weaponTpls?.length) o.weaponTpls = obj.weaponTpls
+          if (obj.weaponCategories?.length) o.weaponCategories = obj.weaponCategories
+          if (obj.wearing?.length) o.wearing = obj.wearing
+          if (obj.notWearing?.length) o.notWearing = obj.notWearing
+          if (obj.timeFrom != null) o.timeFrom = obj.timeFrom
+          if (obj.timeTo != null) o.timeTo = obj.timeTo
+          if (obj.bodyPart?.length) o.bodyPart = obj.bodyPart
+          if (obj.surviveAfterKill) o.surviveAfterKill = true
+          if (obj.requiredExtract) o.requiredExtract = obj.requiredExtract
           return o
         }),
         rewards: buildRewardsJson(q.rewards),

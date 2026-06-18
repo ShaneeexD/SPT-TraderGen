@@ -119,6 +119,54 @@ public class QuestObjective
     // If true, the game shows a progress counter (e.g. "3/15") in the quest UI.
     [JsonPropertyName("useAutoCounter")]
     public bool UseAutoCounter { get; set; } = true;
+
+    // --- Advanced kill condition fields (all optional) ---
+
+    // Minimum kill distance in meters (e.g. 40 for "from 40m+").
+    [JsonPropertyName("minDistance")]
+    public int? MinDistance { get; set; }
+
+    // Maximum kill distance in meters.
+    [JsonPropertyName("maxDistance")]
+    public int? MaxDistance { get; set; }
+
+    // List of weapon template IDs that must be used for the kill.
+    [JsonPropertyName("weaponTpls")]
+    public List<string>? WeaponTpls { get; set; }
+
+    // Weapon categories (e.g. "AssaultRifle", "SMG"). NOT YET IMPLEMENTED — reserved for future use.
+    [JsonPropertyName("weaponCategories")]
+    public List<string>? WeaponCategories { get; set; }
+
+    // Item template IDs the player must be wearing when making the kill.
+    [JsonPropertyName("wearing")]
+    public List<string>? Wearing { get; set; }
+
+    // Item template IDs the player must NOT be wearing when making the kill.
+    [JsonPropertyName("notWearing")]
+    public List<string>? NotWearing { get; set; }
+
+    // In-game hour the kill window starts (0-23). Use with timeTo for night-only quests.
+    [JsonPropertyName("timeFrom")]
+    public int? TimeFrom { get; set; }
+
+    // In-game hour the kill window ends (0-23).
+    [JsonPropertyName("timeTo")]
+    public int? TimeTo { get; set; }
+
+    // Body parts that must be hit (e.g. "Head", "Chest"). If empty, any body part counts.
+    [JsonPropertyName("bodyPart")]
+    public List<string>? BodyPart { get; set; }
+
+    // If true, the player must survive and extract after completing kills.
+    // NOT YET IMPLEMENTED — add a separate survive/extract objective instead.
+    [JsonPropertyName("surviveAfterKill")]
+    public bool? SurviveAfterKill { get; set; }
+
+    // Required extract name for survive/extract objectives (e.g. "Factory gate 0").
+    // For kill objectives this has no effect.
+    [JsonPropertyName("requiredExtract")]
+    public string? RequiredExtract { get; set; }
 }
 
 // Rewards given when the quest is completed successfully.
@@ -244,6 +292,41 @@ public class RotatingObjectiveTemplate
     // Random count range for the objective.
     [JsonPropertyName("countRange")]
     public CountRange CountRange { get; set; } = new();
+
+    // --- Advanced condition fields (all optional) ---
+
+    [JsonPropertyName("minDistance")]
+    public int? MinDistance { get; set; }
+
+    [JsonPropertyName("maxDistance")]
+    public int? MaxDistance { get; set; }
+
+    [JsonPropertyName("weaponTpls")]
+    public List<string>? WeaponTpls { get; set; }
+
+    [JsonPropertyName("weaponCategories")]
+    public List<string>? WeaponCategories { get; set; }
+
+    [JsonPropertyName("wearing")]
+    public List<string>? Wearing { get; set; }
+
+    [JsonPropertyName("notWearing")]
+    public List<string>? NotWearing { get; set; }
+
+    [JsonPropertyName("timeFrom")]
+    public int? TimeFrom { get; set; }
+
+    [JsonPropertyName("timeTo")]
+    public int? TimeTo { get; set; }
+
+    [JsonPropertyName("bodyPart")]
+    public List<string>? BodyPart { get; set; }
+
+    [JsonPropertyName("surviveAfterKill")]
+    public bool? SurviveAfterKill { get; set; }
+
+    [JsonPropertyName("requiredExtract")]
+    public string? RequiredExtract { get; set; }
 }
 
 // How rewards scale based on the generated objective values.

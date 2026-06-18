@@ -86,6 +86,18 @@ export interface QuestObjective {
   location?: string
   itemTpl?: string
   description?: string
+  // Advanced kill conditions (all optional)
+  minDistance?: number | null
+  maxDistance?: number | null
+  weaponTpls?: string[]
+  weaponCategories?: string[]
+  wearing?: string[]
+  notWearing?: string[]
+  timeFrom?: number | null
+  timeTo?: number | null
+  bodyPart?: string[]
+  surviveAfterKill?: boolean
+  requiredExtract?: string
 }
 
 export interface QuestRewards {

@@ -774,6 +774,242 @@ function ObjectiveEditor({ objective, onChange }: {
           onChange={e => onChange({ description: e.target.value || undefined })}
           placeholder="Leave blank for auto-generated text" />
       </Field>
+
+      {/* Advanced Conditions — hidden by default to keep UI beginner-friendly */}
+      <AdvancedConditions objective={objective} onChange={onChange} />
+    </div>
+  )
+}
+
+// ==================== Advanced Conditions Sub-Component ====================
+
+function AdvancedConditions({ objective, onChange }: {
+  objective: QuestObjective
+  onChange: (updates: Partial<QuestObjective>) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const isKill = objective.type === 'kill_enemy'
+  const isLocation = objective.type === 'survive_location' || objective.type === 'extract_location'
+  if (!isKill && !isLocation) return null
+
+  const addToList = (field: keyof QuestObjective, value: string) => {
+    const arr = [...(objective[field] as string[] || []), value]
+    onChange({ [field]: arr } as Partial<QuestObjective>)
+  }
+
+  const removeFromList = (field: keyof QuestObjective, idx: number) => {
+    const arr = [...(objective[field] as string[] || [])]
+    arr.splice(idx, 1)
+    onChange({ [field]: arr.length ? arr : undefined } as Partial<QuestObjective>)
+  }
+
+  const updateListItem = (field: keyof QuestObjective, idx: number, value: string) => {
+    const arr = [...(objective[field] as string[] || [])]
+    arr[idx] = value
+    onChange({ [field]: arr } as Partial<QuestObjective>)
+  }
+
+  const clearNum = (v: string) => {
+    const n = Number(v)
+    return v === '' ? null : (Number.isFinite(n) && n >= 0 ? n : null)
+  }
+
+  return (
+    <div className="border border-tarkov-border/40 rounded-lg">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-3 py-2 text-sm text-tarkov-accent hover:bg-tarkov-border/20 transition-colors rounded-t-lg"
+      >
+        <span className="font-medium">Advanced Conditions</span>
+        {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+      </button>
+
+      {open && (
+        <div className="px-3 pb-3 pt-2 space-y-3 border-t border-tarkov-border/30 rounded-b-lg">
+
+          {/* Distance — only one of min/max can be set at a time */}
+          {isKill && (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Min Distance (m)" tooltip="Kill must be from at least this many meters away. Cannot be used together with Max Distance.">
+                <input type="number" className="input-field text-sm" min={0}
+                  value={objective.minDistance ?? ''}
+                  onChange={e => {
+                    const val = clearNum(e.target.value)
+                    onChange({ minDistance: val, ...(val != null ? { maxDistance: null } : {}) })
+                  }}
+                  placeholder="e.g. 40" />
+              </Field>
+              <Field label="Max Distance (m)" tooltip="Kill must be within this many meters. Cannot be used together with Min Distance.">
+                <input type="number" className="input-field text-sm" min={0}
+                  value={objective.maxDistance ?? ''}
+                  onChange={e => {
+                    const val = clearNum(e.target.value)
+                    onChange({ maxDistance: val, ...(val != null ? { minDistance: null } : {}) })
+                  }}
+                  placeholder="e.g. 100" />
+              </Field>
+            </div>
+          )}
+
+          {/* Time of day */}
+          {isKill && (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Time From (hour)" tooltip="In-game hour when the kill window starts (0-23). Use with Time To for night kills.">
+                <input type="number" className="input-field text-sm" min={0} max={23}
+                  value={objective.timeFrom ?? ''}
+                  onChange={e => onChange({ timeFrom: clearNum(e.target.value) })}
+                  placeholder="e.g. 22" />
+              </Field>
+              <Field label="Time To (hour)" tooltip="In-game hour when the kill window ends (0-23).">
+                <input type="number" className="input-field text-sm" min={0} max={23}
+                  value={objective.timeTo ?? ''}
+                  onChange={e => onChange({ timeTo: clearNum(e.target.value) })}
+                  placeholder="e.g. 5" />
+              </Field>
+            </div>
+          )}
+
+          {/* Weapon templates */}
+          {isKill && (
+            <StringListField
+              label="Weapon Template IDs"
+              tooltip="24-char hex IDs of weapons that must be used for the kill. Find IDs at db.sp-tarkov.com."
+              items={objective.weaponTpls || []}
+              placeholder="24-char hex weapon ID"
+              onAdd={v => addToList('weaponTpls', v)}
+              onRemove={i => removeFromList('weaponTpls', i)}
+              onChangeItem={(i, v) => updateListItem('weaponTpls', i, v)}
+            />
+          )}
+
+          {/* Weapon categories (not yet implemented) */}
+          {isKill && (
+            <StringListField
+              label="Weapon Categories (Not Yet Implemented)"
+              tooltip="Reserved for future use. Weapon category filtering is not yet supported by the mod."
+              items={objective.weaponCategories || []}
+              placeholder="e.g. AssaultRifle"
+              onAdd={v => addToList('weaponCategories', v)}
+              onRemove={i => removeFromList('weaponCategories', i)}
+              onChangeItem={(i, v) => updateListItem('weaponCategories', i, v)}
+            />
+          )}
+
+          {/* Body parts */}
+          {isKill && (
+            <StringListField
+              label="Body Parts"
+              tooltip="Body parts that must be hit. Common values: Head, Chest, Stomach, LeftArm, RightArm, LeftLeg, RightLeg."
+              items={objective.bodyPart || []}
+              placeholder="e.g. Head"
+              onAdd={v => addToList('bodyPart', v)}
+              onRemove={i => removeFromList('bodyPart', i)}
+              onChangeItem={(i, v) => updateListItem('bodyPart', i, v)}
+            />
+          )}
+
+          {/* Wearing / Not Wearing */}
+          {isKill && (
+            <StringListField
+              label="Wearing (item IDs)"
+              tooltip="Item template IDs the player must be wearing when making the kill. 24-char hex IDs."
+              items={objective.wearing || []}
+              placeholder="24-char hex item ID"
+              onAdd={v => addToList('wearing', v)}
+              onRemove={i => removeFromList('wearing', i)}
+              onChangeItem={(i, v) => updateListItem('wearing', i, v)}
+            />
+          )}
+
+          {isKill && (
+            <StringListField
+              label="Not Wearing (item IDs)"
+              tooltip="Item template IDs the player must NOT be wearing when making the kill. 24-char hex IDs."
+              items={objective.notWearing || []}
+              placeholder="24-char hex item ID"
+              onAdd={v => addToList('notWearing', v)}
+              onRemove={i => removeFromList('notWearing', i)}
+              onChangeItem={(i, v) => updateListItem('notWearing', i, v)}
+            />
+          )}
+
+          {/* Survive after kill (not yet implemented) */}
+          {isKill && (
+            <label className="flex items-center gap-2 text-sm text-tarkov-text-dim cursor-pointer">
+              <input type="checkbox" className="accent-tarkov-accent"
+                checked={objective.surviveAfterKill || false}
+                onChange={e => onChange({ surviveAfterKill: e.target.checked || undefined })}
+                disabled />
+              <span>Survive and extract after kills (Not Yet Implemented)</span>
+            </label>
+          )}
+
+          {/* Required extract */}
+          {isLocation && (
+            <Field label="Required Extract" tooltip="Specific extract point name. Leave blank for any extract.">
+              <input className="input-field text-sm" value={objective.requiredExtract || ''}
+                onChange={e => onChange({ requiredExtract: e.target.value || undefined })}
+                placeholder="e.g. Factory gate 0" />
+            </Field>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Helper for array-of-strings fields with add/remove
+function StringListField({ label, tooltip, items, placeholder, onAdd, onRemove, onChangeItem }: {
+  label: string
+  tooltip?: string
+  items: string[]
+  placeholder: string
+  onAdd: (value: string) => void
+  onRemove: (index: number) => void
+  onChangeItem: (index: number, value: string) => void
+}) {
+  const [draft, setDraft] = useState('')
+  const canAdd = draft.trim().length > 0
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-1.5">
+        <span className="label text-sm">{label}</span>
+        {tooltip && (
+          <span className="relative group">
+            <HelpCircle size={13} className="text-tarkov-text-dim hover:text-tarkov-accent cursor-help transition-colors" />
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-tarkov-bg border border-tarkov-border rounded-lg text-xs text-tarkov-text font-normal w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50 shadow-xl leading-relaxed pointer-events-none">
+              {tooltip}
+            </span>
+          </span>
+        )}
+      </div>
+      {items.length > 0 && (
+        <div className="space-y-1.5">
+          {items.map((item, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input className="input-field text-sm flex-1 font-mono" value={item}
+                onChange={e => onChangeItem(i, e.target.value)} placeholder={placeholder} />
+              <button onClick={() => onRemove(i)}
+                className="text-tarkov-error hover:text-tarkov-error/80 p-1">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex items-center gap-2">
+        <input className="input-field text-sm flex-1 font-mono" value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && canAdd) { onAdd(draft.trim()); setDraft('') } }}
+          placeholder={placeholder} />
+        <button onClick={() => { if (canAdd) { onAdd(draft.trim()); setDraft('') } }}
+          className="btn-secondary text-sm flex items-center gap-1 px-2 py-1"
+          disabled={!canAdd}>
+          <Plus size={14} /> Add
+        </button>
+      </div>
     </div>
   )
 }

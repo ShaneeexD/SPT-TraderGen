@@ -282,14 +282,23 @@ public static class QuestBuilder
             savageRole.Add(target);
         }
 
-        // Build the kill sub-condition
+        // Build the kill sub-condition with advanced fields applied on top of the BSG defaults.
         var killCond = new JsonObject
         {
-            ["bodyPart"] = new JsonArray(),
+            ["bodyPart"] = obj.BodyPart?.Count > 0
+                ? new JsonArray(obj.BodyPart.Select(bp => (JsonNode)bp).ToArray())
+                : new JsonArray(),
             ["compareMethod"] = ">=",
             ["conditionType"] = "Kills",
-            ["daytime"] = new JsonObject { ["from"] = 0, ["to"] = 0 },
-            ["distance"] = new JsonObject { ["compareMethod"] = ">=", ["value"] = 0 },
+            ["daytime"] = (obj.TimeFrom.HasValue || obj.TimeTo.HasValue)
+                ? new JsonObject { ["from"] = obj.TimeFrom ?? 0, ["to"] = obj.TimeTo ?? 0 }
+                : new JsonObject { ["from"] = 0, ["to"] = 0 },
+            ["distance"] = (obj.MinDistance.HasValue, obj.MaxDistance.HasValue) switch
+            {
+                (true, _) => new JsonObject { ["compareMethod"] = ">=", ["value"] = obj.MinDistance.Value },
+                (false, true) => new JsonObject { ["compareMethod"] = "<=", ["value"] = obj.MaxDistance.Value },
+                _ => new JsonObject { ["compareMethod"] = ">=", ["value"] = 0 },
+            },
             ["dynamicLocale"] = false,
             ["enemyEquipmentExclusive"] = new JsonArray(),
             ["enemyEquipmentInclusive"] = new JsonArray(),
@@ -299,15 +308,41 @@ public static class QuestBuilder
             ["savageRole"] = savageRole,
             ["target"] = bsgTarget,
             ["value"] = 1,
-            ["weapon"] = new JsonArray(),
+            ["weapon"] = obj.WeaponTpls?.Count > 0
+                ? new JsonArray(obj.WeaponTpls.Select(w => (JsonNode)w).ToArray())
+                : new JsonArray(),
             ["weaponCaliber"] = new JsonArray(),
             ["weaponModsInclusive"] = new JsonArray(),
             ["weaponModsExclusive"] = new JsonArray(),
-            ["equipmentInclusive"] = new JsonArray(),
-            ["equipmentExclusive"] = new JsonArray(),
         };
 
         var counterConditions = new JsonArray { killCond };
+
+        // Add Equipment condition for player-worn item restrictions.
+        // In BSG format, equipmentInclusive/equipmentExclusive live on a separate
+        // "Equipment" counter condition, NOT on "Kills". Each inner array is an OR group.
+        if (obj.Wearing?.Count > 0 || obj.NotWearing?.Count > 0)
+        {
+            var equipCondId = DeriveStableId($"{questId}:obj{index}:equip");
+            var equipCond = new JsonObject
+            {
+                ["conditionType"] = "Equipment",
+                ["dynamicLocale"] = false,
+                ["id"] = equipCondId,
+                ["IncludeNotEquippedItems"] = false,
+            };
+            if (obj.Wearing?.Count > 0)
+            {
+                equipCond["equipmentInclusive"] = new JsonArray(
+                    obj.Wearing.Select(id => new JsonArray((JsonNode)id)).ToArray());
+            }
+            if (obj.NotWearing?.Count > 0)
+            {
+                equipCond["equipmentExclusive"] = new JsonArray(
+                    obj.NotWearing.Select(id => new JsonArray((JsonNode)id)).ToArray());
+            }
+            counterConditions.Add(equipCond);
+        }
 
         // Add location condition
         if (!string.IsNullOrWhiteSpace(obj.Location))
@@ -322,11 +357,30 @@ public static class QuestBuilder
             });
         }
 
-        // Build locale for this objective
+        // TODO: weaponCategories — BSG uses weaponCaliber, not generic categories. Mapping not yet implemented.
+        // TODO: surviveAfterKill — Not directly representable in a single counter condition.
+        //       In vanilla quests this is always split into two separate objectives (kill + survive/extract).
+
+        // Build locale for this objective with advanced condition hints.
         var locationDisplay = !string.IsNullOrWhiteSpace(obj.Location) ? LocationHelper.ToDisplayName(obj.Location) : null;
         var locationText = locationDisplay != null ? $" on {locationDisplay}" : "";
         var targetDisplay = GetTargetDisplayName(target);
-        var desc = obj.Description ?? $"Eliminate {obj.Count} {targetDisplay}{locationText}";
+
+        var distanceHint = obj.MinDistance.HasValue
+            ? $" from {obj.MinDistance.Value}m+"
+            : obj.MaxDistance.HasValue
+                ? $" within {obj.MaxDistance.Value}m"
+                : "";
+
+        var timeHint = (obj.TimeFrom.HasValue || obj.TimeTo.HasValue)
+            ? $" at night"
+            : "";
+
+        var bodyPartHint = obj.BodyPart?.Count > 0
+            ? $" ({string.Join(", ", obj.BodyPart)})"
+            : "";
+
+        var desc = obj.Description ?? $"Eliminate {obj.Count} {targetDisplay}{locationText}{distanceHint}{timeHint}{bodyPartHint}";
         locales[condId] = desc;
 
         return new JsonObject
