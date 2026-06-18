@@ -4,6 +4,8 @@ using System.Reflection;
 using BepInEx.Logging;
 using EFT;
 using EFT.InventoryLogic;
+using EFT.UI;
+using EFT.UI.DragAndDrop;
 using HarmonyLib;
 
 namespace TraderGen.Client.Patches
@@ -19,6 +21,9 @@ namespace TraderGen.Client.Patches
 
         private static readonly FieldInfo CloneDictField = typeof(TraderAssortmentControllerClass)
             .GetField("Dictionary_0", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
+        private static readonly FieldInfo TradeModeField = typeof(TradingItemView)
+            .GetField("etradeMode_0", BindingFlags.NonPublic | BindingFlags.Instance);
 
         // TraderAssortmentControllerClass.GetSchemeForItem returns null for non-empty CompoundItems
         // because GClass3750.IsExchangeable rejects them. This patch bypasses that check and
@@ -74,6 +79,24 @@ namespace TraderGen.Client.Patches
 
                 __result = null;
                 return false;
+            }
+        }
+
+        // TradingItemView.method_39 greys out (CanvasGroup.alpha = 0.3) any CompoundItem
+        // that has items in its grids. This prevents backpacks/rigs with contents from
+        // appearing buyable in the trader grid even though the scheme lookup works.
+        // We skip this for purchase mode items owned by a trader.
+        [HarmonyPatch(typeof(TradingItemView), "method_39")]
+        internal static class Method39Patch
+        {
+            static bool Prefix(TradingItemView __instance)
+            {
+                var tradeMode = (ETradeMode?)TradeModeField?.GetValue(__instance);
+                if (tradeMode == ETradeMode.Purchase)
+                {
+                    return false; // skip original method_39 entirely
+                }
+                return true;
             }
         }
     }
