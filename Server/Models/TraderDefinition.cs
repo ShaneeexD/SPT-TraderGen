@@ -76,11 +76,6 @@ public class TraderDefinition
     [JsonPropertyName("buyCategories")]
     public List<string>? BuyCategories { get; set; }
 
-    // Item category IDs the trader is allowed to sell.
-    // If empty, a default set covering weapons, armour, ammo, gear, etc. is used.
-    [JsonPropertyName("sellCategories")]
-    public List<string>? SellCategories { get; set; }
-
     // Item template IDs that the trader will NOT buy.
     [JsonPropertyName("buyProhibitedItems")]
     public List<string>? BuyProhibitedItems { get; set; }

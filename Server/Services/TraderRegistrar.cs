@@ -79,48 +79,11 @@ public class TraderRegistrar(
         "5448e54d4bdc2dcc718b4568", // Armor
         "5c99f98d86f7745c314214b3", // KeyMechanical
         "57bef4c42459772e8d35a53b", // ArmoredEquipment
-        "5d1c819a86f774771b0acd6c", // WeaponParts
         "5448f39d4bdc2d0a728b4568", // MedKit
         "5448f3ac4bdc2dce718b4569", // Medical
         "5448e8d04bdc2ddf718b4569", // Food
         "5a341c4086f77401f2541505", // Headwear
         "543be5dd4bdc2deb348b4569", // Money
-    ];
-
-    // Default sell categories (handbook IDs used by SPT client to filter trader items).
-    private static readonly List<string> DefaultSellCategories =
-    [
-        "5b47574386f77428ca22b33e", // Barter / Loot
-        "5b47574386f77428ca22b33f", // Gear (armour, rigs, helmets, backpacks, etc.)
-        "5b47574386f77428ca22b346", // Ammo
-        "5b47574386f77428ca22b345", // Special equipment
-        "5b47574386f77428ca22b343", // Maps
-        "5b5f71b386f774093f2ecf11", // Weapons – assault rifles
-        "5b5f71c186f77409407a7ec0", // Weapons – assault carbines
-        "5b5f71de86f774093f2ecf13", // Weapons – machine guns
-        "5b5f724186f77447ed5636ad", // Weapons – SMGs
-        "5b5f736886f774094242f193", // Weapons – shotguns
-        "5b5f73ec86f774093e6cb4fd", // Weapons – pistols
-        "5b5f74cc86f77447ec5d770a", // Weapons – marksman rifles
-        "5b5f750686f774093e6cb503", // Weapons – sniper rifles
-        "5b5f751486f77447ec5d770c", // Weapons – grenade launchers
-        "5b5f752e86f774093e6cb505", // Weapons – special weapons
-        "5b5f754a86f774094242f19b", // Weapons – melee
-        "5b5f755f86f77447ec5d770e", // Weapons – throwables
-        "5b5f757486f774093e6cb507", // Weapon mods – functional
-        "5b5f75b986f77447ec5d7710", // Weapon mods – gear mods
-        "5b5f75c686f774094242f19f", // Weapon mods – muzzle
-        "5b5f75e486f77447ec5d7712", // Weapon mods – sights
-        "5b5f760586f774093e6cb509", // Weapon mods – magazine
-        "5b5f761f86f774094242f1a1", // Weapon mods – stock
-        "575146b724597720a27126d5", // Weapon mods – barrel
-        "635a758bfefc88a93f021b8a", // Weapon mods – handguard
-        "55d45d3f4bdc2d972f8b456c", // Weapon mods – mount
-        "5b363dd25acfc4001a598fd2", // Weapon mods – charging handle
-        "5d1b36a186f7742523398433", // Weapon mods – launcher
-        "59e3577886f774176a362503", // Weapon mods – bipod
-        "5d6e67fba4b9361bc73bc779", // Weapon mods – foregrip
-        "5b5f764186f77447ec5d7714", // Weapon mods – tactical
     ];
 
     // Register a single trader.
@@ -174,11 +137,85 @@ public class TraderRegistrar(
     // Build TraderBase from trader definition.
     private TraderBase BuildTraderBase(TraderDefinition trader, string packFolder)
     {
-        var buyCategories = new List<string>(trader.BuyCategories ?? DefaultBuyCategories);
-        var sellCategories = trader.SellCategories is { Count: > 0 }
-            ? new List<string>(trader.SellCategories)
-            : null;
+        var rawBuyCategories = new List<string>(trader.BuyCategories ?? DefaultBuyCategories);
         var buyProhibited = trader.BuyProhibitedItems ?? new List<string>();
+
+        // Validate buy categories against actual item parent IDs in the DB
+        var allItems = databaseService.GetItems();
+        var validParentIds = new HashSet<string>(allItems.Values.Select(i => i.Parent.ToString()).Where(p => !string.IsNullOrEmpty(p)));
+        var buyCategories = new List<string>();
+        var skippedCategories = new List<string>();
+        foreach (var cat in rawBuyCategories.Distinct())
+        {
+            if (validParentIds.Contains(cat))
+            {
+                buyCategories.Add(cat);
+            }
+            else
+            {
+                skippedCategories.Add(cat);
+            }
+        }
+        if (skippedCategories.Count > 0)
+        {
+            logger.LogWithColor(
+                $"[TraderGen] Skipped invalid buy categories for '{trader.Nickname}': {string.Join(", ", skippedCategories)}",
+                LogTextColor.Red
+            );
+        }
+        if (buyCategories.Count == 0)
+        {
+            logger.LogWithColor(
+                $"[TraderGen] WARNING: No valid buy categories for '{trader.Nickname}', using all valid parents as fallback.",
+                LogTextColor.Red
+            );
+            buyCategories = validParentIds.Take(20).ToList();
+        }
+
+        // Auto-prohibit items with zero/missing handbook prices to prevent client crashes
+        var handbook = databaseService.GetHandbook();
+        var pricedItems = new HashSet<string>(handbook.Items
+            .Where(h => h.Price > 0)
+            .Select(h => h.Id.ToString()));
+        var zeroPriceItems = allItems
+            .Where(kvp => buyCategories.Contains(kvp.Value.Parent.ToString()))
+            .Where(kvp => !pricedItems.Contains(kvp.Key))
+            .Select(kvp => kvp.Key)
+            .ToList();
+        foreach (var itemId in zeroPriceItems)
+        {
+            if (!buyProhibited.Contains(itemId))
+            {
+                buyProhibited.Add(itemId);
+            }
+        }
+        if (zeroPriceItems.Count > 0)
+        {
+            logger.LogWithColor(
+                //$"[TraderGen] Auto-prohibited {zeroPriceItems.Count} zero-price item(s) for '{trader.Nickname}' to prevent client crashes.",
+                LogTextColor.Yellow
+            );
+        }
+
+        // Auto-prohibit currency items to prevent client overflow on large stacks
+        var currencyIds = new[]
+        {
+            "5449016a4bdc2d6f028b456f", // Roubles
+            "5696686a4bdc2da3298b456a", // Dollars
+            "569668774bdc2da2298b4568", // Euros
+        };
+        foreach (var currencyId in currencyIds)
+        {
+            if (!buyProhibited.Contains(currencyId))
+            {
+                buyProhibited.Add(currencyId);
+            }
+        }
+        logger.LogWithColor(
+            //$"[TraderGen] Auto-prohibited currency items for '{trader.Nickname}'.",
+            LogTextColor.Yellow
+        );
+
         var currency = trader.Currency.ToUpperInvariant() switch
         {
             "USD" or "DOLLARS" or "DOLLAR" => "USD",
@@ -240,7 +277,7 @@ public class TraderRegistrar(
                 excluded_id_list = Array.Empty<string>(),
                 quality = "2",
             },
-            sell_category = sellCategories ?? new List<string>(), // Vanilla traders use empty sell_category
+            sell_category = new List<string>(), // Vanilla: always empty
             sell_modifier_for_prohibited_items = 0,
             surname = trader.LastName,
             transferableItems = new

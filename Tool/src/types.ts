@@ -253,7 +253,6 @@ export const VANILLA_BUY_CATEGORIES: { id: string; name: string }[] = [
   { id: '5448e54d4bdc2dcc718b4568', name: 'Armor' },
   { id: '5c99f98d86f7745c314214b3', name: 'KeyMechanical' },
   { id: '57bef4c42459772e8d35a53b', name: 'ArmoredEquipment' },
-  { id: '5d1c819a86f774771b0acd6c', name: 'WeaponParts' },
   { id: '5448f39d4bdc2d0a728b4568', name: 'MedKit' },
   { id: '5448f3ac4bdc2dce718b4569', name: 'Medical' },
   { id: '5448e8d04bdc2ddf718b4569', name: 'Food' },
@@ -335,7 +334,6 @@ export function createDefaultTrader(): TraderDefinition {
       '5448e54d4bdc2dcc718b4568', // Armor
       '5c99f98d86f7745c314214b3', // KeyMechanical
       '57bef4c42459772e8d35a53b', // ArmoredEquipment
-      '5d1c819a86f774771b0acd6c', // WeaponParts
       '5448f39d4bdc2d0a728b4568', // MedKit
       '5448f3ac4bdc2dce718b4569', // Medical
       '5448e8d04bdc2ddf718b4569', // Food
