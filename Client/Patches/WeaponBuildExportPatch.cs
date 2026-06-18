@@ -215,6 +215,54 @@ namespace TraderGen.Client.Patches
                     }
                 }
 
+                var gridsField = itemType.GetField("Grids", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (gridsField != null)
+                {
+                    var grids = gridsField.GetValue(item) as IEnumerable;
+                    if (grids != null)
+                    {
+                        foreach (var grid in grids.Cast<object>())
+                        {
+                            if (grid == null) continue;
+                            var gridId = GetPropOrFieldValue(grid, "ID", "Id")?.ToString();
+                            if (string.IsNullOrEmpty(gridId)) continue;
+
+                            var itemsProp = grid.GetType().GetProperty("Items", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                            var items = itemsProp?.GetValue(grid) as IEnumerable;
+                            if (items == null) continue;
+
+                            foreach (var gridItem in items.Cast<object>())
+                            {
+                                if (gridItem == null) continue;
+                                var childJson = WalkItemTreeRecursive(gridItem, gridItem.GetType());
+                                if (childJson != null)
+                                {
+                                    childJson.slotId = gridId;
+
+                                    var currentAddress = gridItem.GetType().GetProperty("CurrentAddress", BindingFlags.Instance | BindingFlags.Public)?.GetValue(gridItem);
+                                    if (currentAddress != null)
+                                    {
+                                        var locProp = currentAddress.GetType().GetProperty("LocationInGrid", BindingFlags.Instance | BindingFlags.Public);
+                                        var loc = locProp?.GetValue(currentAddress);
+                                        if (loc != null)
+                                        {
+                                            var locType = loc.GetType();
+                                            var xField = locType.GetField("x");
+                                            var yField = locType.GetField("y");
+                                            var rField = locType.GetField("r");
+                                            childJson.locX = xField != null ? (int)xField.GetValue(loc) : 0;
+                                            childJson.locY = yField != null ? (int)yField.GetValue(loc) : 0;
+                                            childJson.locR = rField != null ? Convert.ToInt32(rField.GetValue(loc)) : 0;
+                                        }
+                                    }
+
+                                    root.children.Add(childJson);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 return JsonConvert.SerializeObject(root);
             }
             catch (Exception ex)
@@ -256,6 +304,54 @@ namespace TraderGen.Client.Patches
                         {
                             childJson.slotId = slotId;
                             node.children.Add(childJson);
+                        }
+                    }
+                }
+            }
+
+            var gridsField = itemType.GetField("Grids", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (gridsField != null)
+            {
+                var grids = gridsField.GetValue(item) as IEnumerable;
+                if (grids != null)
+                {
+                    foreach (var grid in grids.Cast<object>())
+                    {
+                        if (grid == null) continue;
+                        var gridId = GetPropOrFieldValue(grid, "ID", "Id")?.ToString();
+                        if (string.IsNullOrEmpty(gridId)) continue;
+
+                        var itemsProp = grid.GetType().GetProperty("Items", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                        var items = itemsProp?.GetValue(grid) as IEnumerable;
+                        if (items == null) continue;
+
+                        foreach (var gridItem in items.Cast<object>())
+                        {
+                            if (gridItem == null) continue;
+                            var childJson = WalkItemTreeRecursive(gridItem, gridItem.GetType());
+                            if (childJson != null)
+                            {
+                                childJson.slotId = gridId;
+
+                                var currentAddress = gridItem.GetType().GetProperty("CurrentAddress", BindingFlags.Instance | BindingFlags.Public)?.GetValue(gridItem);
+                                if (currentAddress != null)
+                                {
+                                    var locProp = currentAddress.GetType().GetProperty("LocationInGrid", BindingFlags.Instance | BindingFlags.Public);
+                                    var loc = locProp?.GetValue(currentAddress);
+                                    if (loc != null)
+                                    {
+                                        var locType = loc.GetType();
+                                        var xField = locType.GetField("x");
+                                        var yField = locType.GetField("y");
+                                        var rField = locType.GetField("r");
+                                        childJson.locX = xField != null ? (int)xField.GetValue(loc) : 0;
+                                        childJson.locY = yField != null ? (int)yField.GetValue(loc) : 0;
+                                        childJson.locR = rField != null ? Convert.ToInt32(rField.GetValue(loc)) : 0;
+                                    }
+                                }
+
+                                node.children.Add(childJson);
+                            }
                         }
                     }
                 }
@@ -307,11 +403,19 @@ namespace TraderGen.Client.Patches
                         Log?.LogWarning("[TraderGen] ShowContextMenu postfix: _buttonsContainer is null.");
                         return;
                     }
+                    Action onClick = () => ExportItem(_contextMenuItem);
+
                     var existing = buttonsContainer.Find("ExportToTraderGen");
                     if (existing != null)
                     {
-                        UnityEngine.Object.Destroy(existing.gameObject);
-                        Log?.LogDebug("[TraderGen] ShowContextMenu postfix: destroyed old button.");
+                        var existingButton = existing.GetComponent<SimpleContextMenuButton>();
+                        if (existingButton != null)
+                        {
+                            existingButton.Show("EXPORT TO TG", "EXPORT TO TG", null, onClick, null, false, true);
+                            existing.SetAsLastSibling();
+                            Log?.LogDebug("[TraderGen] ShowContextMenu postfix: updated existing button.");
+                            return;
+                        }
                     }
 
                     var templateField = typeof(InteractionButtonsContainer).GetField("_buttonTemplate", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -331,11 +435,9 @@ namespace TraderGen.Client.Patches
 
                     var clonedGo = UnityEngine.Object.Instantiate(templateGo, buttonsContainer);
                     clonedGo.name = "ExportToTraderGen";
-                    clonedGo.transform.SetAsLastSibling();
                     var cloned = clonedGo.GetComponent<SimpleContextMenuButton>();
-
-                    Action onClick = () => ExportItem(_contextMenuItem);
                     cloned?.Show("EXPORT TO TG", "EXPORT TO TG", null, onClick, null, false, true);
+                    clonedGo.transform.SetAsLastSibling();
 
                     Log?.LogInfo("[TraderGen] Injected context menu export button via ShowContextMenu postfix.");
                 }
@@ -381,6 +483,9 @@ namespace TraderGen.Client.Patches
         {
             public string itemTpl;
             public string slotId;
+            public int locX;
+            public int locY;
+            public int locR;
             public List<ExportNode> children = new List<ExportNode>();
         }
     }

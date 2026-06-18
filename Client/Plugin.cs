@@ -14,6 +14,7 @@ namespace TraderGen.Client
             {
                 TraderPricePatches.Init(Logger);
                 WeaponBuildExportPatch.Init(Logger);
+                TraderCompoundItemPatch.Init(Logger);
                 var harmony = new Harmony("com.tradergen.client");
                 harmony.PatchAll();
                 Logger.LogInfo("[TraderGen] Client patch loaded.");

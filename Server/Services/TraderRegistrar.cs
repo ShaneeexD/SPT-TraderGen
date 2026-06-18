@@ -192,7 +192,7 @@ public class TraderRegistrar(
         if (zeroPriceItems.Count > 0)
         {
             logger.LogWithColor(
-                //$"[TraderGen] Auto-prohibited {zeroPriceItems.Count} zero-price item(s) for '{trader.Nickname}' to prevent client crashes.",
+                $"[TraderGen] Auto-prohibited {zeroPriceItems.Count} zero-price item(s) for '{trader.Nickname}' to prevent client crashes.",
                 LogTextColor.Yellow
             );
         }
@@ -212,7 +212,7 @@ public class TraderRegistrar(
             }
         }
         logger.LogWithColor(
-            //$"[TraderGen] Auto-prohibited currency items for '{trader.Nickname}'.",
+            $"[TraderGen] Auto-prohibited currency items for '{trader.Nickname}'.",
             LogTextColor.Yellow
         );
 
