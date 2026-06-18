@@ -3,7 +3,7 @@ import {
   Store, Plus, Trash2, Download, AlertCircle, CheckCircle,
   ChevronDown, ChevronUp, Copy, RefreshCw, Eye, Package,
   Shield, Star, Settings, FileJson, HelpCircle, ExternalLink, Upload, Crosshair,
-  X, Tag,
+  X, Tag, ClipboardPaste,
 } from 'lucide-react'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
@@ -301,6 +301,61 @@ export default function App() {
     setExpandedAssort(prev => new Set([...prev, trader.assort.length]))
   }, [trader.assort.length])
 
+  const importFromClipboard = useCallback(async () => {
+    let jsonText = ''
+    try {
+      jsonText = await navigator.clipboard.readText()
+    } catch {
+      jsonText = window.prompt('Paste your TraderGen weapon build JSON here:') || ''
+    }
+    if (!jsonText.trim()) return
+
+    let data: unknown
+    try {
+      data = JSON.parse(jsonText)
+    } catch {
+      alert('Invalid JSON. Make sure you copied a weapon build from the TraderGen client export.')
+      return
+    }
+
+    if (!data || typeof data !== 'object') {
+      alert('Invalid format. Expected a JSON object.')
+      return
+    }
+
+    const obj = data as Record<string, unknown>
+    if (typeof obj.itemTpl !== 'string' || obj.itemTpl.length !== 24) {
+      alert('Invalid format. Expected "itemTpl" field with a 24-char hex ID.')
+      return
+    }
+
+    function parseChildren(raw: unknown): AssortChildItem[] | undefined {
+      if (!Array.isArray(raw)) return undefined
+      const result: AssortChildItem[] = []
+      for (const entry of raw) {
+        if (!entry || typeof entry !== 'object') continue
+        const e = entry as Record<string, unknown>
+        if (typeof e.itemTpl !== 'string' || e.itemTpl.length !== 24) continue
+        if (typeof e.slotId !== 'string') continue
+        result.push({
+          itemTpl: e.itemTpl,
+          slotId: e.slotId,
+          children: parseChildren(e.children),
+        })
+      }
+      return result.length > 0 ? result : undefined
+    }
+
+    const newItem: AssortItem = {
+      ...createDefaultAssortItem(),
+      itemTpl: obj.itemTpl,
+      children: parseChildren(obj.children),
+    }
+
+    setTrader(prev => ({ ...prev, assort: [...prev.assort, newItem] }))
+    setExpandedAssort(prev => new Set([...prev, trader.assort.length]))
+  }, [trader.assort.length])
+
   const removeAssortItem = useCallback((index: number) => {
     setTrader(prev => ({ ...prev, assort: prev.assort.filter((_, i) => i !== index) }))
     setExpandedAssort(prev => { const n = new Set(prev); n.delete(index); return n })
@@ -575,6 +630,7 @@ export default function App() {
             onAddChild={addChild}
             onRemoveChild={removeChild}
             onUpdateChild={updateChild}
+            onImportFromClipboard={importFromClipboard}
             errors={errors}
           />
         )}
@@ -926,7 +982,7 @@ function LoyaltyTab({ levels, onAdd, onRemove, onUpdate }: {
 /* ===== ASSORT TAB ===== */
 function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
   onAdd, onRemove, onUpdate, onAddBarter, onRemoveBarter, onUpdateBarter,
-  onAddChild, onRemoveChild, onUpdateChild, errors }: {
+  onAddChild, onRemoveChild, onUpdateChild, onImportFromClipboard, errors }: {
   assort: AssortItem[]
   loyaltyLevels: LoyaltyLevel[]
   defaultCurrency: string
@@ -941,6 +997,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
   onAddChild: (i: number, path?: number[]) => void
   onRemoveChild: (ai: number, path: number[]) => void
   onUpdateChild: (ai: number, path: number[], key: keyof AssortChildItem, value: unknown) => void
+  onImportFromClipboard: () => void
   errors: ValidationError[]
 }) {
   const itemIds = assort.map(a => a.itemTpl).filter(id => id.length === 24)
@@ -957,6 +1014,9 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
             className="btn-secondary text-sm flex items-center gap-1.5">
             <ExternalLink size={14} /> SPT Item Database
           </a>
+          <button onClick={onImportFromClipboard} className="btn-secondary text-sm flex items-center gap-1.5">
+            <ClipboardPaste size={14} /> Import from TraderGen
+          </button>
           <button onClick={onAdd} className="btn-primary text-sm flex items-center gap-1.5">
             <Plus size={14} /> Add Item
           </button>

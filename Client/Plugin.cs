@@ -13,6 +13,7 @@ namespace TraderGen.Client
             try
             {
                 TraderPricePatches.Init(Logger);
+                WeaponBuildExportPatch.Init(Logger);
                 var harmony = new Harmony("com.tradergen.client");
                 harmony.PatchAll();
                 Logger.LogInfo("[TraderGen] Client patch loaded.");
