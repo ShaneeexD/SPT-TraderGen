@@ -3,7 +3,7 @@
 The following features are planned for future updates:
 
 ## Advanced Quest Objectives
-- Extract using a specific extract only (PRIORITY)
+- Extract using a specific extract only (Ready for next update)
 
 ## Zone-Based Objectives
 - Visit specific locations
@@ -24,6 +24,10 @@ The following features are planned for future updates:
 ## Trader Additions/Changes
 -
 
+## Rewards From Quests
+- Stash expansion (Ready for next update)
+- Skill points (Ready for next update)
+- Pocket size increase (WIP)
+
 ## Things To Look Into
-- Other types of rewards from quests (stash expansion etc)
 - Failure messages system 
