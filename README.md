@@ -4,12 +4,15 @@ A dependency/framework mod that lets anyone, including **non-programmers**, crea
 
 **Tool URL**: https://tradergen-tool.netlify.app
 
+>**New**: Use the in-game [Export Feature](#export-feature) to copy weapon builds and stash items directly into your trader assortment.
+
 ## Contents
 
 - [Overview](#overview)
 - [Quick Start](#quick-start)
   - [For Players (Installing a Trader Pack)](#for-players-installing-a-trader-pack)
   - [For Creators (Making a Trader Pack)](#for-creators-making-a-trader-pack)
+- [Export Feature](#export-feature)
 - [Export Format](#export-format)
 - [Trader Pack JSON (`trader.json`)](#trader-pack-json-traderjson)
 - [Quest Pack JSON (`quests.json`)](#quest-pack-json-questsjson)
@@ -47,6 +50,28 @@ TraderGen has two parts:
 5. Publish your pack — users need TraderGen and WTT - CommonLib installed as a dependency
 
 > ⚠️ **Do not rename any files or images after exporting.** The mod references them by their generated names (e.g., `avatar.jpg`, `tpl_*.jpg`) — renaming will break the pack.
+
+---
+
+## Export Feature
+
+The TraderGen client plugin includes an in-game export button that lets you copy weapon builds and stash items directly to your clipboard, ready for importing into the TraderGen Tool.
+
+### How to use the export feature
+
+- Go to `\SPT\BepInEx\config` and open `com.tradergen.client.cfg` OR use the in-game F12 menu and enable `EnableExportButton`
+- Go to builds and make the weapon build you desire
+- When done, use the menu at the top left and click `EXPORT TO TG`
+
+<img width="169" height="260" alt="image" src="https://github.com/user-attachments/assets/47da192d-336e-4a87-9224-9f6a169fdcd1" />
+
+- If exporting armour/rigs/helmets/containers etc, make the kit you want in your stash, right click it and hit `EXPORT TO TG`
+
+<img width="268" height="371" alt="image" src="https://github.com/user-attachments/assets/bcdea789-d7c7-4940-a87b-d942932c9d58" />
+
+- When done, you can simply import it within the assortment tab on the web app
+
+<img width="1006" height="70" alt="image" src="https://github.com/user-attachments/assets/a18c3f5e-4879-4d8a-86ec-71f78f5031cb" />
 
 ---
 
