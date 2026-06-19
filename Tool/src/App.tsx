@@ -1249,6 +1249,9 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
             className="btn-secondary text-sm flex items-center gap-1.5">
             <ChevronUp size={14} /> Back to Top
           </button>
+          <button onClick={onImportFromClipboard} className="btn-secondary text-sm flex items-center gap-1.5">
+            <ClipboardPaste size={14} /> Import from TraderGen
+          </button>
           <button onClick={onAdd} className="btn-primary text-sm flex items-center gap-1.5">
             <Plus size={14} /> Add Item
           </button>
