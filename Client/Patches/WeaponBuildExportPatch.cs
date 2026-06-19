@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using BepInEx.Logging;
+using EFT.Communications;
 using EFT.InventoryLogic;
 using EFT.UI;
 using HarmonyLib;
@@ -91,7 +92,6 @@ namespace TraderGen.Client.Patches
                     if (itemContext != null)
                     {
                         _contextMenuItem = itemContext.Item;
-                        Log?.LogInfo($"[TraderGen] Stored context menu item: {_contextMenuItem?.Name} ({_contextMenuItem?.GetType().Name}) tpl={_contextMenuItem?.TemplateId}");
                     }
                 }
                 catch (Exception ex)
@@ -120,8 +120,8 @@ namespace TraderGen.Client.Patches
                 {
                     GUIUtility.systemCopyBuffer = json;
                     ShowStatus("Build copied to clipboard!");
+                    NotificationManagerClass.DisplayMessageNotification("Build copied to clipboard!", ENotificationDurationType.Default);
                     Log?.LogInfo("[TraderGen] Build exported to clipboard.");
-                    Log?.LogDebug($"[TraderGen] JSON: {json}");
                 }
                 else
                 {
@@ -416,6 +416,10 @@ namespace TraderGen.Client.Patches
                         var existingButton = existing.GetComponent<SimpleContextMenuButton>();
                         if (existingButton != null)
                         {
+                            var buttonField = typeof(SimpleContextMenuButton).GetField("_button", BindingFlags.Instance | BindingFlags.NonPublic);
+                            var btn = buttonField?.GetValue(existingButton) as Button;
+                            btn?.onClick.RemoveAllListeners();
+
                             existingButton.Show("EXPORT TO TG", "EXPORT TO TG", null, onClick, null, false, true);
                             existing.SetAsLastSibling();
                             Log?.LogDebug("[TraderGen] ShowContextMenu postfix: updated existing button.");
@@ -467,6 +471,7 @@ namespace TraderGen.Client.Patches
                     {
                         GUIUtility.systemCopyBuffer = json;
                         ShowStatus("Item copied to clipboard!");
+                        NotificationManagerClass.DisplayMessageNotification("Item copied to clipboard!", ENotificationDurationType.Default);
                         Log?.LogInfo("[TraderGen] Item exported to clipboard.");
                     }
                     else
