@@ -24,3 +24,6 @@ The following features are planned for future updates:
 ## Trader Additions/Changes
 -
 
+## Things To Look Into
+- Other types of rewards from quests (stash expansion etc)
+- Failure messages system 
