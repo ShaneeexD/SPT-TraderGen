@@ -748,11 +748,6 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, errors }: {
                   <option value="__custom__">Custom...</option>
                 </select>
 
-                {/* Known pocket preview */}
-                {quest.rewards.pockets && KNOWN_POCKETS.some(p => p.id === quest.rewards.pockets) && (
-                  <PocketPreview pocketId={quest.rewards.pockets} />
-                )}
-
                 {/* Custom pocket editor */}
                 {quest.rewards.customPocket && (
                   <CustomPocketEditor
