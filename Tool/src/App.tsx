@@ -3,7 +3,7 @@ import {
   Store, Plus, Trash2, Download, AlertCircle, CheckCircle,
   ChevronDown, ChevronUp, Copy, RefreshCw, Eye, Package,
   Shield, Star, Settings, FileJson, HelpCircle, ExternalLink, Upload, Crosshair,
-  X, Tag, ClipboardPaste,
+  X, Tag, ClipboardPaste, BookOpen,
 } from 'lucide-react'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
@@ -18,6 +18,7 @@ import {
 import { validateTrader, buildExportJson, validateQuestPack, buildQuestExportJson } from './validation'
 import QuestsTab from './QuestsTab'
 import { useItemNames } from './useItemNames'
+import { getVanillaTraderList, loadVanillaTraderById, loadVanillaQuestPackByTraderId } from './vanillaLoader'
 
 type Tab = 'general' | 'loyalty' | 'assort' | 'quests' | 'preview'
 
@@ -29,6 +30,22 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('general')
   const [expandedAssort, setExpandedAssort] = useState<Set<number>>(new Set())
   const [showExportSuccess, setShowExportSuccess] = useState(false)
+  const [vanillaList, setVanillaList] = useState<{ id: string; nickname: string }[]>([])
+  const [showVanillaDropdown, setShowVanillaDropdown] = useState(false)
+  const [loadingVanilla, setLoadingVanilla] = useState(false)
+  const vanillaDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (vanillaDropdownRef.current && !vanillaDropdownRef.current.contains(e.target as Node)) {
+        setShowVanillaDropdown(false)
+      }
+    }
+    if (showVanillaDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showVanillaDropdown])
 
   const update = useCallback(<K extends keyof TraderDefinition>(key: K, value: TraderDefinition[K]) => {
     setTrader(prev => ({ ...prev, [key]: value }))
@@ -99,6 +116,50 @@ export default function App() {
     setShowExportSuccess(true)
     setTimeout(() => setShowExportSuccess(false), 3000)
   }, [trader, validate])
+
+  const loadVanillaTrader = useCallback(async (traderId: string) => {
+    setLoadingVanilla(true)
+    try {
+      const loaded = await loadVanillaTraderById(traderId)
+      if (loaded) {
+        // Generate a new unique ID so the loaded trader doesn't collide with the vanilla one
+        const newTrader = { ...loaded, id: generateMongoId() }
+        setTrader(newTrader)
+        setErrors([])
+        setExpandedAssort(new Set())
+
+        // Also load vanilla quests for this trader
+        try {
+          const questPack = await loadVanillaQuestPackByTraderId(traderId)
+          // Regenerate quest IDs so they don't collide
+          const remappedQuests = questPack.storyQuests.map(q => ({
+            ...q,
+            id: generateMongoId(),
+            traderId: newTrader.id,
+          }))
+          setQuestPack({ ...questPack, storyQuests: remappedQuests })
+        } catch {
+          setQuestPack(createDefaultQuestPack())
+        }
+        setQuestErrors([])
+      }
+    } finally {
+      setLoadingVanilla(false)
+      setShowVanillaDropdown(false)
+    }
+  }, [])
+
+  const openVanillaDropdown = useCallback(async () => {
+    setShowVanillaDropdown(prev => !prev)
+    if (vanillaList.length === 0) {
+      try {
+        const list = await getVanillaTraderList()
+        setVanillaList(list)
+      } catch {
+        // silently fail
+      }
+    }
+  }, [vanillaList.length])
 
   const importFromJson = useCallback((jsonStr: string, packName?: string, avatarDataUrl?: string, questJsonStr?: string, questIconDataUrl?: string, perQuestIconDataUrls?: Map<string, string>, perTemplateIconDataUrls?: Map<string, string>) => {
     try {
@@ -536,6 +597,34 @@ export default function App() {
               <p><span className="text-tarkov-accent">.zip</span> — Loads trader data, pack name, and avatar image.</p>
               <p className="mt-1"><span className="text-tarkov-accent">.json</span> — Loads trader data only. Pack name and avatar must be set manually.</p>
             </div>
+          </div>
+          <div className="relative" ref={vanillaDropdownRef}>
+            <button
+              onClick={openVanillaDropdown}
+              disabled={loadingVanilla}
+              className="btn-secondary text-sm flex items-center gap-1.5"
+            >
+              <BookOpen size={14} />
+              {loadingVanilla ? 'Loading…' : 'Load Vanilla'}
+              <ChevronDown size={14} className={`transition-transform ${showVanillaDropdown ? 'rotate-180' : ''}`} />
+            </button>
+            {showVanillaDropdown && (
+              <div className="absolute right-0 top-full mt-2 w-64 max-h-80 overflow-y-auto bg-tarkov-surface border border-tarkov-border rounded-lg shadow-xl z-50">
+                {vanillaList.length === 0 ? (
+                  <div className="px-4 py-3 text-xs text-tarkov-text-dim">No vanilla traders found.</div>
+                ) : (
+                  vanillaList.map(v => (
+                    <button
+                      key={v.id}
+                      onClick={() => loadVanillaTrader(v.id)}
+                      className="w-full text-left px-4 py-2 text-sm text-tarkov-text hover:bg-tarkov-accent/10 hover:text-tarkov-accent transition-colors border-b border-tarkov-border last:border-0"
+                    >
+                      {v.nickname}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
           <button onClick={() => { setTrader(createDefaultTrader()); setQuestPack(createDefaultQuestPack()); setErrors([]); setQuestErrors([]) }}
             className="btn-secondary text-sm flex items-center gap-1.5">
@@ -1005,7 +1094,18 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
   errors: ValidationError[]
 }) {
   const itemIds = assort.map(a => a.itemTpl).filter(id => id.length === 24)
-  const itemNames = useItemNames(itemIds)
+  const barterIds = assort.flatMap(a => (a.barter || []).map(b => b.itemTpl)).filter(id => id.length === 24)
+  const allIds = [...new Set([...itemIds, ...barterIds])]
+  const itemNames = useItemNames(allIds)
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const filteredAssort = searchQuery.trim()
+    ? assort.filter((item) => {
+        const q = searchQuery.toLowerCase()
+        const name = itemNames.get(item.itemTpl)?.toLowerCase() || ''
+        return item.itemTpl.toLowerCase().includes(q) || name.includes(q)
+      })
+    : assort
 
   return (
     <div className="space-y-4">
@@ -1041,8 +1141,29 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
         </div>
       )}
 
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          placeholder="Search by item ID or name..."
+          className="input-field text-sm flex-1"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+        />
+        {searchQuery && (
+          <button onClick={() => setSearchQuery('')} className="btn-secondary text-xs px-2">
+            Clear
+          </button>
+        )}
+      </div>
+
+      {filteredAssort.length === 0 && searchQuery && (
+        <div className="card text-center text-tarkov-text-dim py-6">
+          No items match "{searchQuery}".
+        </div>
+      )}
+
       <div className="space-y-2" id="assort-list-top">
-        {assort.map((item, i) => {
+        {filteredAssort.map((item, i) => {
           const isExpanded = expanded.has(i)
           const itemErrors = errors.filter(e => e.field.startsWith(`assort.${i}`))
           const isBarter = item.barter && item.barter.length > 0
@@ -1174,6 +1295,11 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, expanded, onToggle,
                                   <input className="input-field font-mono text-sm" value={b.itemTpl}
                                     onChange={e => onUpdateBarter(i, j, 'itemTpl', e.target.value)}
                                     placeholder="24-char hex ID" maxLength={24} />
+                                  {itemNames.get(b.itemTpl) && (
+                                    <p className="text-xs text-tarkov-text italic mt-1 truncate">
+                                      {itemNames.get(b.itemTpl)}
+                                    </p>
+                                  )}
                                 </div>
                                 <div className="w-24">
                                   <label className="label">Count</label>

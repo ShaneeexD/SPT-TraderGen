@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import {
   Plus, Trash2, ChevronDown, ChevronUp, RefreshCw, Target, Crosshair,
   Clock, MapPin, HelpCircle, AlertCircle, Upload, Image as ImageIcon,
-  Scroll, Repeat, GripVertical, Copy, Package,
+  Scroll, Repeat, GripVertical, Copy, Package, Search,
 } from 'lucide-react'
 import type {
   QuestPackDefinition, StoryQuestDefinition, QuestObjective, QuestRewards, SkillReward,
@@ -149,6 +149,14 @@ export default function QuestsTab({ questPack, traderId, onChange, errors }: {
   const [activeSection, setActiveSection] = useState<'story' | 'rotating'>('story')
   const [expandedQuest, setExpandedQuest] = useState<number | null>(null)
   const [expandedRotating, setExpandedRotating] = useState<number | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const filteredStoryQuests = searchQuery.trim()
+    ? questPack.storyQuests.filter(q => {
+        const sq = searchQuery.toLowerCase()
+        return q.id.toLowerCase().includes(sq) || (q.name || '').toLowerCase().includes(sq)
+      })
+    : questPack.storyQuests
 
   const hasQuests = questPack.storyQuests.length > 0 || questPack.rotatingQuests.length > 0
 
@@ -259,14 +267,36 @@ export default function QuestsTab({ questPack, traderId, onChange, errors }: {
             </button>
           </div>
 
+          <div className="flex items-center gap-2">
+            <Search size={14} className="text-tarkov-text-dim shrink-0" />
+            <input
+              type="text"
+              placeholder="Search by quest ID or name..."
+              className="input-field text-sm flex-1"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className="btn-secondary text-xs px-2">
+                Clear
+              </button>
+            )}
+          </div>
+
           {questPack.storyQuests.length === 0 && (
             <div className="card text-center text-tarkov-text-dim py-8">
               No story quests defined. Add one to get started.
             </div>
           )}
 
+          {filteredStoryQuests.length === 0 && searchQuery && (
+            <div className="card text-center text-tarkov-text-dim py-6">
+              No quests match "{searchQuery}".
+            </div>
+          )}
+
           <div className="space-y-2">
-            {questPack.storyQuests.map((quest, qi) => {
+            {filteredStoryQuests.map((quest, qi) => {
               const isExpanded = expandedQuest === qi
               const questErrors = errors.filter(e => e.field.startsWith(`quest.${qi}`))
 

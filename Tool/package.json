@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build-vanilla": "node scripts/build-vanilla.js",
+    "build-vanilla-quests": "node scripts/build-vanilla-quests.js",
+    "build": "npm run build-vanilla && npm run build-vanilla-quests && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

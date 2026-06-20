@@ -7,10 +7,10 @@ headers = []
 [functions."*"]
 
 [build]
-publish = "d:\\SPT MODS\\TraderGen\\Tool\\dist"
+publish = "D:\\SPT MODS\\TraderGen\\Tool\\dist"
 publishOrigin = "config"
 commandOrigin = "config"
-base = "d:\\SPT MODS\\TraderGen\\Tool"
+base = "D:\\SPT MODS\\TraderGen\\Tool"
 command = "npm run build"
 
 [build.environment]
