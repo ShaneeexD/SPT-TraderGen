@@ -1099,16 +1099,14 @@ function ObjectiveEditor({ objective, onChange }: {
         )}
 
         {isZonePlaceItem && (
-          <Field label="Item Template ID" tooltip="Must be a BSG quest marker item. Only marker-type items work with PlaceBeacon — arbitrary items will crash the client.">
-            <input className="input-field text-sm font-mono" value={objective.plantItemTpl || ''}
-              onChange={e => onChange({ plantItemTpl: e.target.value || undefined })}
-              placeholder="24-char hex" maxLength={24} />
-            <p className="text-xs text-tarkov-text-dim mt-1">
-              ⚠️ Only BSG marker items work. Known TPLs:<br />
-              <span className="font-mono">5991b51486f77447b112d44f</span> (MS2000 Marker)<br />
-              <span className="font-mono">5ac78a9b86f7741cca0bbd8d</span> (Signal Jammer)<br />
-              <span className="font-mono">63a0b2eabea67a6d93009e52</span> (Radio repeater)
-            </p>
+          <Field label="Marker Item" tooltip="Only BSG quest marker items work with PlaceBeacon. Arbitrary items will crash the client.">
+            <select className="input-field text-sm" value={objective.plantItemTpl || ''}
+              onChange={e => onChange({ plantItemTpl: e.target.value || undefined })}>
+              <option value="">— Select marker —</option>
+              <option value="5991b51486f77447b112d44f">MS2000 Marker</option>
+              <option value="5ac78a9b86f7741cca0bbd8d">Signal Jammer</option>
+              <option value="63a0b2eabea67a6d93009e52">Radio Repeater</option>
+            </select>
           </Field>
         )}
       </div>
