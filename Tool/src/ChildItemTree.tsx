@@ -93,6 +93,15 @@ export function ChildItemTree({
                   <SlotPicker onSelect={slotId => onUpdate(childPath, 'slotId', slotId)} />
                 </div>
               </div>
+              <div className="w-20">
+                <label className="label text-[11px]">Amount</label>
+                <input type="number" className="input-field text-sm text-center" min={1}
+                  value={child.amount ?? 1}
+                  onChange={e => {
+                    const v = parseInt(e.target.value) || 1
+                    onUpdate(childPath, 'amount', v === 1 ? undefined : v)
+                  }} />
+              </div>
               <button onClick={() => onRemove(childPath)}
                 className="text-tarkov-error hover:text-tarkov-error/80 mb-2">
                 <Trash2 size={14} />

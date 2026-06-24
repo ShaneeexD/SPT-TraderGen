@@ -199,6 +199,10 @@ public class AssortChildItem
     [JsonPropertyName("itemId")]
     public string? ItemId { get; set; }
 
+    // Stack size for this child item (e.g. ammo count in mag, coin stack). Defaults to 1.
+    [JsonPropertyName("amount")]
+    public int? Amount { get; set; }
+
     // Sub-items attached to this child (e.g. foregrip on handguard).
     // If empty, this is a leaf node.
     [JsonPropertyName("children")]

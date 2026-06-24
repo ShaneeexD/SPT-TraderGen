@@ -554,13 +554,16 @@ public class TraderRegistrar(
         foreach (var child in children)
         {
             var childId = child.ItemId ?? new MongoId().ToString();
+            var upd = new Upd();
+            if (child.Amount is > 1)
+                upd.StackObjectsCount = child.Amount.Value;
             items.Add(new Item
             {
                 Id = childId,
                 Template = child.ItemTpl,
                 ParentId = parentId,
                 SlotId = child.SlotId,
-                Upd = new Upd(),
+                Upd = upd,
             });
 
             if (child.Children is { Count: > 0 })

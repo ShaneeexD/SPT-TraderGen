@@ -38,6 +38,7 @@ export interface LoyaltyLevel {
 export interface AssortChildItem {
   itemTpl: string
   slotId: string
+  amount?: number
   children?: AssortChildItem[]
 }
 
