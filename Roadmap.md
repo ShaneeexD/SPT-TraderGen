@@ -3,7 +3,7 @@
 The following features are planned for future updates:
 
 ## Advanced Quest Objectives
-- Extract using a specific extract only (Ready for next update)
+- Dynamic Quest Pools
 
 ## Zone-Based Objectives
 - Visit specific locations
@@ -22,12 +22,13 @@ The following features are planned for future updates:
 -
 
 ## Trader Additions/Changes
--
+- Insurance Service
+- Weapon Cleaning
+- Seasonal / Rotating Stock
 
 ## Rewards From Quests
-- Stash expansion (Ready for next update)
-- Skill points (Ready for next update)
 - Pocket size increase (WIP)
 
 ## Things To Look Into
-- Failure messages system 
+- Failure messages system
+- Achievement Rewards 
