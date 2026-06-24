@@ -614,7 +614,7 @@ public static class QuestBuilder
             ["index"] = index,
             ["parentId"] = "",
             ["plantTime"] = obj.PlantTime ?? 3,
-            ["target"] = obj.PlantItemTpl ?? "",
+            ["target"] = new JsonArray { obj.PlantItemTpl ?? "" },
             ["zoneId"] = obj.ZoneId ?? "",
             ["value"] = obj.Count,
             ["visibilityConditions"] = new JsonArray(),
