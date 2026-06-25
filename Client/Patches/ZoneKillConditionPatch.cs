@@ -8,13 +8,7 @@ using BepInEx.Logging;
 
 namespace TraderGen.Client.Patches
 {
-    /// <summary>
-    /// Patches QuestBookClass.GetConditionHandlersByZone to include InZone conditions
-    /// (used by zone_kill objectives) for custom WTT-registered zones.
-    /// WTT's own patch only handles ConditionLeaveItemAtLocation and ConditionSalvage —
-    /// this extends it to also return handlers for ConditionInZone so kills inside
-    /// custom zones are tracked correctly.
-    /// </summary>
+    // Extends quest zone condition handlers to support InZone conditions for custom zone_kill objectives.
     internal static class ZoneKillConditionPatch
     {
         internal static ManualLogSource Log;

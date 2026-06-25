@@ -20,6 +20,7 @@ A dependency/framework mod that lets anyone, including **non-programmers**, crea
   - [Rotating Quests](#rotating-quests)
 - [Publishing a Trader Pack](#publishing-a-trader-pack)
 - [Validation & Error Handling](#validation--error-handling)
+- [Localization](#localization)
 - [Technical Details](#technical-details)
 - [License](#license)
 
@@ -403,6 +404,56 @@ TraderGen validates all JSON files on load and logs clear errors to the server c
 - Invalid reward scaling values
 
 If a pack has errors it is **skipped** — other packs still load normally.
+
+---
+
+## Localization - WIP (Not yet implemented)
+
+TraderGen supports per-language locale files inside a trader pack. This lets a single pack provide translations for traders, quests, and quest messages without duplicating the pack for each language.
+
+Create a `locales/` folder inside the trader pack:
+
+```
+traders/YourTrader/
+  ├── trader.json
+  ├── quests.json
+  └── locales/
+      ├── en.json
+      ├── ge.json
+      └── po.json
+```
+
+Each file is a flat JSON object of SPT locale keys:
+
+```json
+{
+  "YOUR_TRADER_ID Nickname": "...",
+  "YOUR_TRADER_ID Description": "...",
+  "YOUR_TRADER_ID Location": "...",
+  "YOUR_TRADER_ID FirstName": "...",
+  "YOUR_TRADER_ID FullName": "...",
+  "YOUR_QUEST_ID name": "...",
+  "YOUR_QUEST_ID description": "...",
+  "YOUR_QUEST_ID startedMessageText": "...",
+  "YOUR_QUEST_ID successMessageText": "..."
+}
+```
+
+The filename must match SPT's internal language key (not the standard ISO code):
+
+| Language | SPT key | Filename |
+|----------|---------|----------|
+| English | `en` | `en.json` |
+| German | `ge` | `ge.json` |
+| French | `fr` | `fr.json` |
+| Spanish | `es` | `es.json` |
+| Portuguese | `po` | `po.json` |
+| Russian | `ru` | `ru.json` |
+| Chinese | `ch` | `ch.json` |
+
+Values from these files override the defaults generated from `trader.json` and `quests.json` for players using that language.
+
+> Locale files must be valid JSON. Unlike `trader.json` and `quests.json`, they do **not** support `//` comments.
 
 ---
 

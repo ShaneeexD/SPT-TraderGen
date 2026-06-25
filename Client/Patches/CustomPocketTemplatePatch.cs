@@ -7,23 +7,7 @@ using HarmonyLib;
 
 namespace TraderGen.Client.Patches
 {
-    /// <summary>
-    /// Prevents custom TraderGen pocket template IDs from being silently dropped during
-    /// client-side inventory deserialization.
-    ///
-    /// Root cause: ItemFactoryClass.method_7 is used as a delegate filter inside
-    /// method_0/FlatItemsToTree. It returns false for any item whose _tpl is not in
-    /// ItemTemplates, causing the item to be silently skipped. When the pocket item is
-    /// dropped, EFT spawns a new default-pocket item and syncs it back to the server,
-    /// overwriting the custom pocket TPL with the default one.
-    ///
-    /// Fix: Prefix on method_7 (applied manually via reflection since HarmonyPatch
-    /// attribute cannot target compiler-generated method names). If the _tpl is not in
-    /// ItemTemplates but slotId is "Pockets", remap _tpl to the default pocket TPL so
-    /// method_7 returns true and the pocket item survives deserialization.
-    ///
-    /// Safety net: Prefix on CreateItem for the binary deserialization path.
-    /// </summary>
+    // Keeps custom pocket template IDs from being dropped during client inventory deserialization.
     internal static class CustomPocketTemplatePatch
     {
         private const string DefaultPocketTpl = "627a4e6b255f7527fb05a0f6";

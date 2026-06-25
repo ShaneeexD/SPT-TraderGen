@@ -6,10 +6,7 @@ using SPTarkov.Server.Core.Models.Eft.Common;
 
 namespace TraderGen.Patches;
 
-/// <summary>
-/// Logs server-side pocket reward application so we can see if SPT
-/// is calling ReplaceProfilePocketTpl and with what template ID.
-/// </summary>
+// Logs SPT's ReplaceProfilePocketTpl calls for pocket reward debugging.
 public class PocketRewardLogPatch : AbstractPatch
 {
     protected override MethodBase GetTargetMethod()

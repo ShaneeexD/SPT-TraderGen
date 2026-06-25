@@ -9,9 +9,7 @@ using SPTarkov.Server.Core.Models.Enums;
 
 namespace TraderGen.Patches;
 
-/// <summary>
-/// Logs quest reward application so we can see if SPT is processing our Pockets reward.
-/// </summary>
+// Logs SPT quest reward application for debugging.
 public class QuestRewardDebugPatch : AbstractPatch
 {
     protected override MethodBase GetTargetMethod()
@@ -33,9 +31,7 @@ public class QuestRewardDebugPatch : AbstractPatch
     }
 }
 
-/// <summary>
-/// Logs every reward processed by RewardHelper.ApplyRewards.
-/// </summary>
+// Logs every reward processed by RewardHelper.ApplyRewards.
 public class RewardHelperDebugPatch : AbstractPatch
 {
     protected override MethodBase GetTargetMethod()

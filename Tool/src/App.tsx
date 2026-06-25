@@ -52,6 +52,18 @@ export default function App() {
   const update = useCallback(<K extends keyof TraderDefinition>(key: K, value: TraderDefinition[K]) => {
     setTrader(prev => ({ ...prev, [key]: value }))
     setErrors([])
+
+    // When the trader ID changes, update the traderId reference in all story quests
+    // so the pack stays internally consistent.
+    if (key === 'id') {
+      setQuestPack(prev => ({
+        ...prev,
+        storyQuests: prev.storyQuests.map(q => ({
+          ...q,
+          traderId: value as string
+        }))
+      }))
+    }
   }, [])
 
   const validate = useCallback(() => {
@@ -1150,7 +1162,7 @@ function LoyaltyTab({ levels, insuranceEnabled, onAdd, onRemove, onUpdate }: {
                 <input type="number" className="input-field" value={ll.minStanding}
                   onChange={e => onUpdate(i, 'minStanding', Number(e.target.value))} step={0.01} />
               </Field>
-              <Field label="Buy Price Coef" tooltip="Percentage coefficient for buy prices at this tier. Higher = trader pays more when buying from player. Typical range: 30-60.">
+              <Field label="Buy Price Coef" tooltip="SPT formula: trader pays (100 - buyPriceCoef)% of the item's value. So 40 means 60% paid, 1 means 99% paid, 100 means 0% paid. Lower = trader pays more. Typical range: 30-60.">
                 <input type="number" className="input-field" value={ll.buyPriceCoef}
                   onChange={e => onUpdate(i, 'buyPriceCoef', Number(e.target.value))} min={0} max={100} />
               </Field>

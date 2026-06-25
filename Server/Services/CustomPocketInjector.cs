@@ -9,23 +9,13 @@ using TraderGen.Models;
 
 namespace TraderGen.Services;
 
-/// <summary>
-/// Generates custom pocket templates, writes them to db/CustomItems/ as JSON files,
-/// and injects them into the SPT items database.
-/// </summary>
+// Generates custom pocket templates and injects them into the SPT items database.
 public class CustomPocketInjector(DatabaseService databaseService)
 {
-    /// <summary>
-    /// A cache of already-injected pocket layouts so we don't duplicate them.
-    /// Key: deterministic hash of the slot layout. Value: generated template ID.
-    /// </summary>
+    // Cache to avoid generating duplicate templates for the same layout.
     private readonly Dictionary<string, string> _injectedLayouts = new();
 
-    /// <summary>
-    /// For a given custom pocket definition, generates a unique template ID,
-    /// clones a base pocket template with the new grids, writes it to db/CustomItems/,
-    /// injects it into the DB, and returns the ID.
-    /// </summary>
+    // Generates and registers a custom pocket template for the given definition.
     public string Inject(CustomPocketDefinition definition, string customItemsDir)
     {
         var layoutKey = ComputeLayoutKey(definition);
@@ -115,10 +105,7 @@ public class CustomPocketInjector(DatabaseService databaseService)
         return generatedId;
     }
 
-    /// <summary>
-    /// Computes a deterministic key for a pocket layout so identical layouts
-    /// get the same template ID (prevents duplicate templates).
-    /// </summary>
+    // Computes a deterministic key for a pocket layout.
     private static string ComputeLayoutKey(CustomPocketDefinition definition)
     {
         var sb = new StringBuilder();
@@ -139,10 +126,7 @@ public class CustomPocketInjector(DatabaseService databaseService)
         return Convert.ToHexStringLower(hash[..12]);
     }
 
-    /// <summary>
-    /// Generates a deterministic 24-hex-char ID from the layout key using SHA256.
-    /// The same pocket layout will always produce the same template ID across restarts.
-    /// </summary>
+    // Generates a deterministic 24-hex-char template ID from a layout key.
     private static string GenerateDeterministicId(string layoutKey)
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes("tradergen_pocket_" + layoutKey));

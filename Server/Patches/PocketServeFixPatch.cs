@@ -9,15 +9,7 @@ using TraderGen.Helpers;
 
 namespace TraderGen.Patches;
 
-/// <summary>
-/// Ensures the client always receives the correct TraderGen custom pocket template ID.
-///
-/// Even though PocketRestoreService fixes pockets immediately after profile load, other
-/// code paths (e.g. equipment-stand upgrades, client round-trips, or migration edge
-/// cases) can reset the pocket to the default TPL before /client/game/profile/list is
-/// served. This postfix on ProfileHelper.GetCompleteProfile restores the correct TPL
-/// on the cloned profile every time it is returned to the client.
-/// </summary>
+// Restores the correct custom pocket TPL every time the complete profile is served to the client.
 public class PocketServeFixPatch : AbstractPatch
 {
     private static ProfileHelper? _profileHelper;

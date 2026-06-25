@@ -15,13 +15,7 @@ using SPTarkov.Server.Core.Services;
 
 namespace TraderGen.Migration;
 
-/// <summary>
-/// Ensures TraderGen custom pocket templates survive the InvalidPocketFix migration.
-/// Phase 1 (CanMigrate): injects templates into GetItems() early.
-/// Phase 2 (PostMigrate): runs AFTER InvalidPocketFix (declared as prerequisite) and
-/// restores any pocket TPL that InvalidPocketFix incorrectly reset to default, by
-/// checking which TraderGen pocket-reward quests the player has completed.
-/// </summary>
+// Ensures TraderGen custom pocket templates survive the InvalidPocketFix migration.
 [Injectable]
 public class TraderGenPocketMigration(DatabaseService databaseService, ModHelper modHelper, ISptLogger<TraderGenPocketMigration> logger) : AbstractProfileMigration
 {

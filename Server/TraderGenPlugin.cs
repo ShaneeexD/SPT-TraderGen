@@ -283,9 +283,10 @@ public class TraderGenPlugin(
         // Pre-register locale entries
         PreRegisterLocales(allTemplates);
 
-        // Enable Harmony patch
+        // Enable Harmony patches
         GetRepeatableQuestsPatch.SetDependencies(profileHelper, timeUtil);
         new GetRepeatableQuestsPatch().Enable();
+        new LocaleFallbackPatch().Enable();
 
         // Register locale entries via standard registrar
         RepeatableQuestLocaleRegistrar.RegisterLocales(databaseService, logger);

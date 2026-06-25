@@ -8,21 +8,14 @@ using HarmonyLib;
 
 namespace TraderGen.Client.Patches
 {
-    /// <summary>
-    /// Patches GClass3812.smethod_1 (quest reward text generation) for Pockets rewards
-    /// to show the actual slot count difference (e.g. "+4 pocket slots") instead of
-    /// the hardcoded vanilla "+2 pocket slots" localized string.
-    /// </summary>
+    // Shows the actual pocket slot count difference for Pockets quest rewards.
     internal static class QuestPocketRewardPatch
     {
         internal static ManualLogSource Log;
 
         internal static void Init(ManualLogSource log) => Log = log;
 
-        /// <summary>
-        /// Postfix on GClass3812.smethod_1 to override nameText for Pockets rewards.
-        /// This is where the reward display text is computed before being shown in StatView.
-        /// </summary>
+        // Overrides the reward display text for Pockets rewards.
         [HarmonyPatch(typeof(GClass3812), "smethod_1")]
         internal static class Smethod1Patch
         {
@@ -49,10 +42,7 @@ namespace TraderGen.Client.Patches
             }
         }
 
-        /// <summary>
-        /// Calculates the difference in total pocket cell counts between the
-        /// reward template and the player's currently equipped pocket template.
-        /// </summary>
+        // Calculates the total pocket cell difference between reward and current templates.
         private static int CalculatePocketDifference(string rewardTemplateId)
         {
             string currentTemplateId = GetCurrentPocketTemplateId();
@@ -64,9 +54,7 @@ namespace TraderGen.Client.Patches
             return rewardCells - currentCells;
         }
 
-        /// <summary>
-        /// Gets the template ID of the player's currently equipped pocket item.
-        /// </summary>
+        // Gets the template ID of the player's currently equipped pocket item.
         private static string GetCurrentPocketTemplateId()
         {
             try
@@ -94,10 +82,7 @@ namespace TraderGen.Client.Patches
             }
         }
 
-        /// <summary>
-        /// Counts the total number of pocket cells (width*height summed across all grids)
-        /// for a given template ID. Uses reflection to read CellsH/CellsV safely.
-        /// </summary>
+        // Counts the total pocket cells for a given template ID using reflection.
         private static int CountPocketCells(string templateId)
         {
             if (string.IsNullOrEmpty(templateId))

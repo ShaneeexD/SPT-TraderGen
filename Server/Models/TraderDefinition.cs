@@ -136,8 +136,8 @@ public class LoyaltyLevelDefinition
     [JsonPropertyName("minStanding")]
     public double MinStanding { get; set; } = 0;
 
-    // Buy price coefficient (percentage the trader pays when buying from player).
-    // Higher = trader pays more. Typical range 30-60.
+    // Buy price coefficient. SPT computes trader buyback price as (100 - buyPriceCoef)% of the item's value.
+    // So lower values mean the trader pays more. 40 = trader pays ~60%. Typical range 30-60.
     [JsonPropertyName("buyPriceCoef")]
     public int BuyPriceCoef { get; set; } = 40;
 

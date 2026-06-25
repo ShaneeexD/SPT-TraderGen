@@ -1,0 +1,15 @@
+{
+  "aabbccdd11223344eeff5566 FullName": "Viktor Kozlov",
+  "aabbccdd11223344eeff5566 FirstName": "Viktor",
+  "aabbccdd11223344eeff5566 Nickname": "Viktor",
+  "aabbccdd11223344eeff5566 Location": "Zollstelle Lagerhausbezirk",
+  "aabbccdd11223344eeff5566 Description": "Ein ehemaliger Fabrikvorarbeiter, der sich mit überschüssiger Militärausrüstung handelt. Viktor ist zuverlässig, aber ein harter Verhandlungspartner. Er spezialisiert sich auf einfache Waffen und Schutzausrüstung.",
+  "aabbccdd112233440000aa01 name": "Späher",
+  "aabbccdd112233440000aa01 description": "Die Situation in Tarkov verschlechtert sich. Ich brauche jemanden, der die Lage vor Ort einschätzt. Die Zollstelle ist zum Kriegsgebiet geworden, überrannt von Plünderern. Räum das Gebiet und melde dich.",
+  "aabbccdd112233440000aa01 successMessageText": "Du bist zurückgekommen. Die meisten schaffen das bei ihrem ersten Einsatz nicht. Vielleicht hast du doch Potenzial.",
+  "aabbccdd112233440000aa01 startedMessageText": "Die Zollstelle wimmelt von Scavs. Ich brauche dich, um ihre Zahl zu dezimieren und heil zurückzukehren. Bereue es nicht.",
+  "aabbccdd112233440000aa02 name": "Nachschub",
+  "aabbccdd112233440000aa03 name": "Überlebender",
+  "aabbccdd112233440000aa04 name": "Eindringling",
+  "aabbccdd112233440000aa05 name": "Operative"
+}

@@ -14,3 +14,4 @@ This is an example trader pack for the TraderGen framework.
 - Item template IDs (`itemTpl`) can be found in the SPT item database or wiki
 - Comments in JSON are supported (the loader strips them)
 - If the avatar file is missing, the trader will load but have no image
+- Add a `locales/` folder with `<lang>.json` files to translate the trader and quest text for other languages. Use SPT's internal keys (e.g. `ge.json` for German, `po.json` for Portuguese, `fr.json` for French)

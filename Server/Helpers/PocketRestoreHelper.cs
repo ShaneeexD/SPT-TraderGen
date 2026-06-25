@@ -7,15 +7,10 @@ using SPTarkov.Server.Core.Models.Enums;
 
 namespace TraderGen.Helpers;
 
-/// <summary>
-/// Shared helper for determining the correct TraderGen custom pocket template ID
-/// for a profile and restoring the pocket TPL on the PmcData.
-/// </summary>
+// Helper to resolve and restore the correct custom pocket template for a profile.
 public static class PocketRestoreHelper
 {
-    /// <summary>
-    /// Builds a questId -> custom pocket template ID map from the TraderGen quest packs.
-    /// </summary>
+    // Builds a questId -> custom pocket template ID map from TraderGen quest packs.
     public static Dictionary<string, string> BuildQuestPocketMap(string modPath)
     {
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -50,10 +45,7 @@ public static class PocketRestoreHelper
         return result;
     }
 
-    /// <summary>
-    /// Returns the correct custom pocket template ID for a PMC profile based on the
-    /// most recently completed TraderGen pocket-reward quest.
-    /// </summary>
+    // Returns the correct pocket template ID based on the most recently completed pocket-reward quest.
     public static string? GetCorrectPocketTpl(PmcData pmc, Dictionary<string, string> questPocketMap)
     {
         if (pmc?.Quests == null || questPocketMap.Count == 0) return null;
@@ -69,10 +61,7 @@ public static class PocketRestoreHelper
         return correctTpl;
     }
 
-    /// <summary>
-    /// Restores every pocket item in the PMC profile to the correct custom template ID.
-    /// </summary>
-    /// <returns>True if any pocket was changed.</returns>
+    // Restores every pocket item in the profile to the correct custom template ID.
     public static bool RestorePockets(PmcData pmc, Dictionary<string, string> questPocketMap)
     {
         if (pmc?.Inventory?.Items == null) return false;

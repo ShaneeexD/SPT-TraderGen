@@ -26,7 +26,8 @@ public class TraderRegistrar(
     DatabaseService databaseService,
     ImageRouter imageRouter,
     ConfigServer configServer,
-    ModHelper modHelper
+    ModHelper modHelper,
+    LocaleLoader localeLoader
 )
 {
     private readonly TraderConfig _traderConfig = configServer.GetConfig<TraderConfig>();
@@ -114,6 +115,9 @@ public class TraderRegistrar(
 
             // Add locale entries
             AddTraderLocales(traderBase, trader);
+
+            // Apply pack-specific locale overrides for other languages
+            localeLoader.LoadPackLocales(packFolder, traderBase.Id);
 
             // Build and assign assort
             BuildAndAssignAssort(trader);
@@ -223,6 +227,10 @@ public class TraderRegistrar(
             _ => "RUB"
         };
 
+        // If buying is disabled, clear the buy categories so the client/server cannot sell items to this trader.
+        var effectiveBuyCategories = trader.BuyerEnabled ? buyCategories : new List<string>();
+        var effectiveBuyProhibited = trader.BuyerEnabled ? buyProhibited : new List<string>();
+
         // Build base.json content
         var baseJson = new
         {
@@ -250,13 +258,13 @@ public class TraderRegistrar(
             isCanTransferItems = false,
             items_buy = new
             {
-                category = buyCategories,
+                category = effectiveBuyCategories,
                 id_list = Array.Empty<string>(),
             },
             items_buy_prohibited = new
             {
                 category = Array.Empty<string>(),
-                id_list = buyProhibited,
+                id_list = effectiveBuyProhibited,
             },
             location = trader.Location,
             medic = false,

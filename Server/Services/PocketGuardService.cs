@@ -14,12 +14,7 @@ using SPTarkov.Server.Core.Services;
 
 namespace TraderGen.Services;
 
-/// <summary>
-/// Runs at SaveCallbacks+1 (after all profiles are loaded from disk) and restores
-/// the correct custom pocket TPL in-memory for any profile that has completed a
-/// TraderGen pocket-reward quest. This ensures the client receives the correct TPL
-/// when it requests /client/game/profile/list.
-/// </summary>
+// Restores the correct custom pocket TPL after profile load.
 [Injectable(TypePriority = OnLoadOrder.SaveCallbacks + 1)]
 public class PocketRestoreService(
     ISptLogger<PocketRestoreService> logger,
@@ -104,12 +99,7 @@ public class PocketRestoreService(
     }
 }
 
-/// <summary>
-/// Registers a before-save callback with SaveServer that restores the correct
-/// custom pocket TPL on any profile that has completed a TraderGen pocket reward
-/// quest. This runs every time a profile is about to be saved to disk, guarding
-/// against any server or client event that resets the pocket to the default.
-/// </summary>
+// Restores the correct custom pocket TPL before every profile save.
 [Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 2)]
 public class PocketGuardService(
     ISptLogger<PocketGuardService> logger,
