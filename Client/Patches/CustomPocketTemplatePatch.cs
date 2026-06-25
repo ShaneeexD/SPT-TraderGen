@@ -34,17 +34,6 @@ namespace TraderGen.Client.Patches
 
         internal static void Apply(Harmony harmony)
         {
-            // Postfix on FlatItemsToTree to log deserialized pocket details
-            var flatItemsToTree = typeof(ItemFactoryClass).GetMethod(
-                nameof(ItemFactoryClass.FlatItemsToTree),
-                BindingFlags.Public | BindingFlags.Instance);
-            if (flatItemsToTree != null)
-            {
-                harmony.Patch(flatItemsToTree,
-                    postfix: new HarmonyMethod(typeof(CustomPocketTemplatePatch), nameof(FlatItemsToTreePostfix)));
-                Log?.LogInfo("[TraderGen] Patched FlatItemsToTree postfix for pocket diagnostics.");
-            }
-
             // Patch method_7 by name — it's a compiler-generated instance method
             var method7 = typeof(ItemFactoryClass).GetMethod("method_7",
                 BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
@@ -57,7 +46,6 @@ namespace TraderGen.Client.Patches
             {
                 harmony.Patch(method7,
                     prefix: new HarmonyMethod(typeof(CustomPocketTemplatePatch), nameof(Method7Prefix)));
-                Log?.LogInfo("[TraderGen] Patched ItemFactoryClass.method_7 for custom pocket persistence.");
             }
 
             // Safety net: patch CreateItem for binary deserialization path
@@ -72,55 +60,25 @@ namespace TraderGen.Client.Patches
             }
         }
 
-        static void FlatItemsToTreePostfix()
-        {
-            try
-            {
-                var app = Comfort.Common.Singleton<ClientApplication<ISession>>.Instance;
-                if (app?.Session?.Profile?.Inventory?.Equipment == null) return;
-
-                var slot = app.Session.Profile.Inventory.Equipment.GetSlot(EquipmentSlot.Pockets);
-                var pocketItem = slot?.ContainedItem as CompoundItem;
-                if (pocketItem == null) return;
-
-                var tpl = pocketItem.TemplateId;
-                var gridCount = pocketItem.Grids?.Length ?? -1;
-                Log?.LogInfo($"[TraderGen] Live pocket tpl='{tpl}' grids={gridCount} type={pocketItem.GetType().Name}");
-            }
-            catch (Exception ex)
-            {
-                Log?.LogError($"[TraderGen] FlatItemsToTreePostfix error: {ex.Message}");
-            }
-        }
-
         static void Method7Prefix(FlatItemsDataClass x, ItemFactoryClass __instance)
         {
             try
             {
                 if (x == null) return;
-
-                // Diagnostic: log any item that looks like a pocket archetype parent
-                var tplStr = (string)x._tpl;
-                if (tplStr != null && (tplStr == DefaultPocketTpl || tplStr.StartsWith("d2f510") || tplStr.StartsWith("627a4e")))
-                    Log?.LogInfo($"[TraderGen] method_7 hit: slotId='{x.slotId}' _tpl='{tplStr}' inTemplates={__instance.ItemTemplates.ContainsKey(x._tpl)}");
-
                 if (x.slotId != "Pockets") return;
                 if (__instance.ItemTemplates.ContainsKey(x._tpl)) return;
 
                 var customTpl = (string)x._tpl;
-                Log?.LogInfo($"[TraderGen] Custom pocket TPL '{customTpl}' not in ItemTemplates — injecting clone from default pocket.");
 
                 // Clone the default pocket template and register under the custom ID
                 ItemTemplate defaultTpl;
                 if (!__instance.ItemTemplates.TryGetValue(new MongoID(DefaultPocketTpl), out defaultTpl) || defaultTpl == null)
                 {
-                    Log?.LogWarning($"[TraderGen] Default pocket TPL not found in ItemTemplates — cannot inject custom template.");
                     return;
                 }
 
                 var cloned = CloneWithNewId(defaultTpl, customTpl);
                 __instance.ItemTemplates[new MongoID(customTpl)] = cloned;
-                Log?.LogInfo($"[TraderGen] Injected custom pocket template '{customTpl}' into client ItemTemplates.");
             }
             catch (Exception ex)
             {
@@ -145,7 +103,6 @@ namespace TraderGen.Client.Patches
                 if (templateId == null || templateId.Length != 24) return;
                 if (!IsHexString(templateId)) return;
 
-                Log?.LogDebug($"[TraderGen] CreateItem unknown TPL '{templateId}' — remapping to default pocket.");
                 templateId = DefaultPocketTpl;
             }
             catch (Exception ex)

@@ -29,20 +29,13 @@ public class PocketRestoreService(
 {
     public async Task OnLoad()
     {
-        logger.Info("[TraderGen] PocketRestoreService.OnLoad running...");
         try
         {
             var questPocketMap = BuildMap();
-            if (questPocketMap.Count == 0)
-            {
-                logger.Info("[TraderGen] PocketRestoreService: no pocket-reward quests found.");
-                return;
-            }
+            if (questPocketMap.Count == 0) return;
 
             var profiles = saveServer.GetProfiles();
-            logger.Info($"[TraderGen] PocketRestoreService: checking {profiles.Count} profile(s) for pocket TPL...");
-
-            foreach (var (profileId, profile) in profiles)
+            foreach (var (_, profile) in profiles)
             {
                 var pmc = profile?.CharacterData?.PmcData;
                 if (pmc?.Quests == null || pmc.Inventory?.Items == null) continue;
@@ -59,14 +52,7 @@ public class PocketRestoreService(
                 foreach (var item in pmc.Inventory.Items.Where(i => i.SlotId == "Pockets"))
                 {
                     if (item.Template.ToString() != correctTpl)
-                    {
-                        logger.Info($"[TraderGen] PocketRestore: fixing profile {profileId} pocket {item.Id} {item.Template} → {correctTpl}");
                         item.Template = new MongoId(correctTpl);
-                    }
-                    else
-                    {
-                        logger.Info($"[TraderGen] PocketRestore: profile {profileId} pocket already correct ({item.Template})");
-                    }
                 }
             }
         }
@@ -140,16 +126,11 @@ public class PocketGuardService(
     public async Task OnLoad()
     {
         _questPocketMap = BuildQuestPocketRewardMap();
-        if (_questPocketMap.Count == 0)
-        {
-            logger.Info("[TraderGen] PocketGuard: no pocket-reward quests found, guard not registered.");
-            return;
-        }
+        if (_questPocketMap.Count == 0) return;
 
 #pragma warning disable CS0618
         saveServer.AddBeforeSaveCallback(CallbackId, GuardProfile);
 #pragma warning restore CS0618
-        logger.Info($"[TraderGen] PocketGuard registered before-save callback ({_questPocketMap.Count} pocket quest(s) tracked).");
         await Task.CompletedTask;
     }
 
@@ -174,10 +155,7 @@ public class PocketGuardService(
             foreach (var item in pmc.Inventory.Items.Where(i => i.SlotId == "Pockets"))
             {
                 if (item.Template.ToString() != correctTpl)
-                {
-                    logger.Info($"[TraderGen] PocketGuard: restoring pocket {item.Id} from {item.Template} → {correctTpl} before save.");
                     item.Template = new MongoId(correctTpl);
-                }
             }
         }
         catch (Exception ex)

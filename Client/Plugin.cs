@@ -6,7 +6,7 @@ using TraderGen.Client.Patches;
 
 namespace TraderGen.Client
 {
-    [BepInPlugin("com.tradergen.client", "TraderGen Client", "1.7.0")]
+    [BepInPlugin("com.tradergen.client", "TraderGen Client", "2.0.0")]
     public class Plugin : BaseUnityPlugin
     {
         internal static ConfigEntry<bool> EnableExportButton { get; private set; }

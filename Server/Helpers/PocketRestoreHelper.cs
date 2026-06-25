@@ -85,7 +85,6 @@ public static class PocketRestoreHelper
         {
             if (item.Template.ToString() != correctTpl)
             {
-                Console.WriteLine($"[TraderGen] RestorePockets: {item.Id} {item.Template} -> {correctTpl}");
                 item.Template = new MongoId(correctTpl);
                 changed = true;
             }

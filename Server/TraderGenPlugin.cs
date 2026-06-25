@@ -21,7 +21,7 @@ public record ModMetadata : AbstractModMetadata
     public override string Name { get; init; } = "TraderGen";
     public override string Author { get; init; } = "Serenity";
     public override List<string>? Contributors { get; init; }
-    public override SemanticVersioning.Version Version { get; init; } = new("1.7.0");
+    public override SemanticVersioning.Version Version { get; init; } = new("2.0.0");
     public override SemanticVersioning.Range SptVersion { get; init; } = new("4.0.13");
     public override List<string>? Incompatibilities { get; init; }
     public override Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; } = new()
@@ -49,7 +49,7 @@ public class TraderGenPlugin(
     public async Task OnLoad()
     {
         logger.LogWithColor("[TraderGen] ====================================", LogTextColor.Cyan);
-        logger.LogWithColor("[TraderGen] TraderGen Framework v1.7.0 loading...", LogTextColor.Cyan);
+        logger.LogWithColor("[TraderGen] TraderGen Framework v2.0.0 loading...", LogTextColor.Cyan);
         logger.LogWithColor("[TraderGen] ====================================", LogTextColor.Cyan);
 
         // Load trader JSON files from traders/ directory
@@ -140,7 +140,6 @@ public class TraderGenPlugin(
                     var pocketId = pocketInjector.Inject(quest.Rewards.CustomPocket, traderGenPocketsDir);
                     quest.Rewards.Pockets = pocketId;
                     quest.Rewards.CustomPocket = null;
-                    logger.LogWithColor($"[TraderGen] OnLoad injected pocket template '{pocketId}' into item DB (before migrations).", LogTextColor.Cyan);
                 }
             }
 

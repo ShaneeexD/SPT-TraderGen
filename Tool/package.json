@@ -1,6 +1,6 @@
 {
   "name": "tradergen-tool",
-  "version": "1.7.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Visual editor for creating SPTarkov TraderGen trader packs",
   "type": "module",

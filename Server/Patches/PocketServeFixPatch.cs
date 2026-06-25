@@ -49,10 +49,7 @@ public class PocketServeFixPatch : AbstractPatch
 
         try
         {
-            if (PocketRestoreHelper.RestorePockets(pmc, _questPocketMap))
-            {
-                Console.WriteLine($"[TraderGen] PocketServeFixPatch: restored pockets for profile {sessionId} before serving to client.");
-            }
+            PocketRestoreHelper.RestorePockets(pmc, _questPocketMap);
         }
         catch (Exception ex)
         {

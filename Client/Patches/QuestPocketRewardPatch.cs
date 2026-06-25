@@ -41,7 +41,6 @@ namespace TraderGen.Client.Patches
                     int diff = CalculatePocketDifference(reward.target);
                     string sign = diff > 0 ? "+" : "";
                     nameText = $"{sign}{diff} pocket cells";
-                    Log?.LogInfo($"[TraderGen] Pocket reward text set to: {nameText}");
                 }
                 catch (Exception ex)
                 {

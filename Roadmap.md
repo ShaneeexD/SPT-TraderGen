@@ -11,7 +11,6 @@ The following features are planned for future updates:
 - Place markers in designated areas (Ready for next update)
 - Place items in designated areas
 - Kill in designated areas (Ready for next update)
-- Extract after visiting a location
 - Multi-stage location objectives
 
 ## Multi-Stage Quest Chains
@@ -27,7 +26,7 @@ The following features are planned for future updates:
 - Seasonal / Rotating Stock
 
 ## Rewards From Quests
-- Pocket size increase (WIP)
+- Pocket size increase (Ready for next update)
 
 ## Things To Look Into
 - Failure messages system

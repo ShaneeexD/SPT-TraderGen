@@ -37,9 +37,7 @@ public class TraderGenPocketMigration(DatabaseService databaseService, ModHelper
 
     public override bool CanMigrate(JsonObject profile, IEnumerable<IProfileMigration> previouslyRanMigrations)
     {
-        var injected = InjectAllPocketTemplates();
-        if (injected > 0)
-            logger.Info($"[TraderGen] Injected {injected} custom pocket template(s) into item DB.");
+        InjectAllPocketTemplates();
         return true;
     }
 
@@ -68,18 +66,11 @@ public class TraderGenPocketMigration(DatabaseService databaseService, ModHelper
             if (correctTpl == null) return true;
 
             // Restore ALL pocket items that have been reset (main pocket + equipment stand pocket)
-            var restored = 0;
             foreach (var pocketItem in pmc.Inventory.Items.Where(i => i.SlotId == "Pockets"))
             {
                 if (pocketItem.Template.ToString() != correctTpl)
-                {
-                    logger.Info($"[TraderGen] Restoring pocket {pocketItem.Id} from {pocketItem.Template} to {correctTpl}");
                     pocketItem.Template = new MongoId(correctTpl);
-                    restored++;
-                }
             }
-            if (restored == 0)
-                logger.Info($"[TraderGen] Pocket TPL already correct ({correctTpl}), no restoration needed.");
         }
         catch
         {
