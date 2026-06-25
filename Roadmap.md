@@ -6,11 +6,11 @@ The following features are planned for future updates:
 - Dynamic Quest Pools
 
 ## Zone-Based Objectives
-- Visit specific locations
-- Discover/enter custom zones
-- Place markers in designated areas
+- Visit specific locations (Ready for next update)
+- Discover/enter custom zones (Ready for next update)
+- Place markers in designated areas (Ready for next update)
 - Place items in designated areas
-- Kill in designated areas
+- Kill in designated areas (Ready for next update)
 - Extract after visiting a location
 - Multi-stage location objectives
 
