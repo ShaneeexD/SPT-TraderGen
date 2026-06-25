@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using SPTarkov.Server.Core.Models.Logging;
 using SPTarkov.Server.Core.Models.Utils;
+using SPTarkov.Server.Core.Services;
 using TraderGen.Models;
 
 namespace TraderGen.Services;
@@ -18,6 +19,7 @@ public static class QuestBuilder
         string outputBaseDir,
         string packFolder,
         string? defaultQuestIcon,
+        DatabaseService databaseService,
         ISptLogger<TraderGenPlugin> logger)
     {
         var traderDir = Path.Combine(outputBaseDir, traderId);
@@ -73,7 +75,7 @@ public static class QuestBuilder
         {
             // Resolve quest icon
             var iconFileName = ResolveQuestIcon(quest, packFolder, defaultQuestIcon, imagesDir);
-            var bsgQuest = BuildStoryQuest(quest, allLocales, iconFileName);
+            var bsgQuest = BuildStoryQuest(quest, allLocales, iconFileName, databaseService);
             allQuests[quest.Id] = bsgQuest;
             BuildQuestAssortUnlocks(quest.Id, quest.Rewards, questAssortSuccess);
             count++;
@@ -109,7 +111,7 @@ public static class QuestBuilder
 
     // ==================== Story Quest Builder ====================
 
-    private static JsonObject BuildStoryQuest(StoryQuestDefinition quest, JsonObject locales, string iconFileName)
+    private static JsonObject BuildStoryQuest(StoryQuestDefinition quest, JsonObject locales, string iconFileName, DatabaseService databaseService)
     {
         var questId = quest.Id;
 
@@ -154,7 +156,7 @@ public static class QuestBuilder
         for (var i = 0; i < quest.Objectives.Count; i++)
         {
             var obj = quest.Objectives[i];
-            var conditionNode = BuildObjectiveCondition(obj, i, locales, questId);
+            var conditionNode = BuildObjectiveCondition(obj, i, locales, questId, databaseService);
             finishConditions.Add(conditionNode);
         }
 
@@ -215,12 +217,12 @@ public static class QuestBuilder
 
     // Objective builders
 
-    private static JsonNode BuildObjectiveCondition(QuestObjective obj, int index, JsonObject locales, string questId)
+    private static JsonNode BuildObjectiveCondition(QuestObjective obj, int index, JsonObject locales, string questId, DatabaseService databaseService)
     {
         return obj.Type.ToLowerInvariant() switch
         {
-            "handover_item" => BuildHandoverCondition(obj, index, false, locales, questId),
-            "handover_fir_item" => BuildHandoverCondition(obj, index, true, locales, questId),
+            "handover_item" => BuildHandoverCondition(obj, index, false, locales, questId, databaseService),
+            "handover_fir_item" => BuildHandoverCondition(obj, index, true, locales, questId, databaseService),
             "kill_enemy" => BuildKillCondition(obj, index, locales, questId),
             "survive_location" => BuildSurviveCondition(obj, index, locales, questId),
             "extract_location" => BuildExtractCondition(obj, index, locales, questId),
@@ -231,13 +233,14 @@ public static class QuestBuilder
         };
     }
 
-    private static JsonObject BuildHandoverCondition(QuestObjective obj, int index, bool foundInRaid, JsonObject locales, string questId)
+    private static JsonObject BuildHandoverCondition(QuestObjective obj, int index, bool foundInRaid, JsonObject locales, string questId, DatabaseService databaseService)
     {
         var condId = DeriveStableId($"{questId}:obj{index}:cond");
 
         // Build locale for this objective
         var firText = foundInRaid ? "found in raid " : "";
-        var desc = obj.Description ?? $"Hand over {obj.Count} {firText}items ({obj.ItemTpl})";
+        var itemName = GetItemName(databaseService, obj.ItemTpl);
+        var desc = obj.Description ?? $"Hand over {obj.Count} {firText}{itemName}";
         locales[condId] = desc;
 
         return new JsonObject
@@ -257,6 +260,30 @@ public static class QuestBuilder
             ["value"] = obj.Count,
             ["visibilityConditions"] = new JsonArray(),
         };
+    }
+
+    private static string GetItemName(DatabaseService databaseService, string? itemTpl)
+    {
+        if (string.IsNullOrWhiteSpace(itemTpl)) return "item";
+
+        try
+        {
+            var globalLocales = databaseService.GetLocales().Global;
+            if (globalLocales.TryGetValue("en", out var enLocale))
+            {
+                var data = enLocale.Value;
+                if (data != null && data.TryGetValue($"{itemTpl} Name", out var name) && !string.IsNullOrWhiteSpace(name))
+                {
+                    return name;
+                }
+            }
+        }
+        catch
+        {
+            // Fallback to template id on error
+        }
+
+        return itemTpl;
     }
 
     private static JsonObject BuildKillCondition(QuestObjective obj, int index, JsonObject locales, string questId)

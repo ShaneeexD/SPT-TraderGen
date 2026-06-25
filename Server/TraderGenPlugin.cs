@@ -157,7 +157,7 @@ public class TraderGenPlugin(
             {
                 var count = QuestBuilder.BuildQuestFiles(
                     questPack.TraderId, storyQuests, questOutputDir,
-                    questPack.PackFolder, questPack.Definition.DefaultQuestIcon, logger);
+                    questPack.PackFolder, questPack.Definition.DefaultQuestIcon, databaseService, logger);
                 if (count > 0)
                     totalStoryQuests += count;
                 else
