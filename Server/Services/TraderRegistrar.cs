@@ -423,17 +423,20 @@ public class TraderRegistrar(
                 var itemId = assortItem.ItemId ?? new MongoId().ToString();
 
                 // Create root item
+                var upd = new Upd
+                {
+                    UnlimitedCount = assortItem.UnlimitedStock,
+                    StackObjectsCount = assortItem.Stock,
+                };
+                if (assortItem.StackSize is > 1)
+                    upd.StackObjectsCount = assortItem.StackSize.Value;
                 var item = new Item
                 {
                     Id = itemId,
                     Template = assortItem.ItemTpl,
                     ParentId = "hideout",
                     SlotId = "hideout",
-                    Upd = new Upd
-                    {
-                        UnlimitedCount = assortItem.UnlimitedStock,
-                        StackObjectsCount = assortItem.Stock,
-                    },
+                    Upd = upd,
                 };
 
                 // Apply buy restriction

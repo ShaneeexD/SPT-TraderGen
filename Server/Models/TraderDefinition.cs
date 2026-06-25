@@ -154,6 +154,10 @@ public class AssortItemDefinition
     [JsonPropertyName("unlimitedStock")]
     public bool UnlimitedStock { get; set; } = true;
 
+    // Stack size per purchase (e.g. 30 rounds for an ammo pack). If omitted, defaults to 1.
+    [JsonPropertyName("stackSize")]
+    public int? StackSize { get; set; }
+
     // Price in the specified currency. Ignored if barter items are specified.
     [JsonPropertyName("price")]
     public int Price { get; set; } = 0;

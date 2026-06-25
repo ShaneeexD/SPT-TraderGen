@@ -150,6 +150,7 @@ export function buildExportJson(trader: TraderDefinition): object {
         unlimitedStock: item.unlimitedStock,
       }
       if (!item.unlimitedStock) out.stock = item.stock
+      if (item.stackSize && item.stackSize > 1) out.stackSize = item.stackSize
       if (item.barter && item.barter.length > 0) {
         out.barter = item.barter.map(b => {
           const isDogtag = isDogtagId(b.itemTpl)

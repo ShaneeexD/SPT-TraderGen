@@ -47,6 +47,7 @@ export interface AssortItem {
   loyaltyLevel: number
   stock: number
   unlimitedStock: boolean
+  stackSize?: number
   price: number
   currency?: string
   barter?: BarterRequirement[]
@@ -350,6 +351,7 @@ export function createDefaultAssortItem(): AssortItem {
     loyaltyLevel: 1,
     stock: 999999,
     unlimitedStock: true,
+    stackSize: undefined,
     price: 0,
     currency: undefined,
     barter: undefined,

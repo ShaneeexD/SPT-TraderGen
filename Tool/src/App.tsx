@@ -20,6 +20,7 @@ import QuestsTab from './QuestsTab'
 import { useItemNames } from './useItemNames'
 import { getVanillaTraderList, loadVanillaTraderById, loadVanillaQuestPackByTraderId } from './vanillaLoader'
 import { ChildItemTree } from './ChildItemTree'
+import { isAmmoBox, getAmmoBoxInfo } from './ammoBoxes'
 
 type Tab = 'general' | 'loyalty' | 'assort' | 'quests' | 'preview'
 
@@ -568,6 +569,17 @@ export default function App() {
     return { ...item, children: newChildren }
   }
 
+  const addAmmoBoxChild = useCallback((assortIndex: number, roundTpl: string, count: number) => {
+    setTrader(prev => ({
+      ...prev,
+      assort: prev.assort.map((item, i) => {
+        if (i !== assortIndex) return item
+        const newChild: AssortChildItem = { ...createDefaultAssortChild(), slotId: 'cartridges', itemTpl: roundTpl, amount: count }
+        return { ...item, children: [...(item.children || []), newChild] }
+      }),
+    }))
+  }, [])
+
   const addChild = useCallback((assortIndex: number, path: number[] = []) => {
     setTrader(prev => ({
       ...prev,
@@ -773,6 +785,7 @@ export default function App() {
             onAddBarter={addBarter}
             onRemoveBarter={removeBarter}
             onUpdateBarter={updateBarter}
+            onAddAmmoBoxChild={addAmmoBoxChild}
             onAddChild={addChild}
             onRemoveChild={removeChild}
             onUpdateChild={updateChild}
@@ -1132,7 +1145,7 @@ function LoyaltyTab({ levels, onAdd, onRemove, onUpdate }: {
 /* ===== ASSORT TAB ===== */
 function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expanded, onToggle,
   onAdd, onRemove, onUpdate, onAddBarter, onRemoveBarter, onUpdateBarter,
-  onAddChild, onRemoveChild, onUpdateChild, onImportFromClipboard, errors }: {
+  onAddAmmoBoxChild, onAddChild, onRemoveChild, onUpdateChild, onImportFromClipboard, errors }: {
   assort: AssortItem[]
   loyaltyLevels: LoyaltyLevel[]
   defaultCurrency: string
@@ -1145,6 +1158,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
   onAddBarter: (i: number) => void
   onRemoveBarter: (ai: number, bi: number) => void
   onUpdateBarter: (ai: number, bi: number, key: keyof BarterRequirement, value: unknown) => void
+  onAddAmmoBoxChild: (i: number, roundTpl: string, count: number) => void
   onAddChild: (i: number, path?: number[]) => void
   onRemoveChild: (ai: number, path: number[]) => void
   onUpdateChild: (ai: number, path: number[], key: keyof AssortChildItem, value: unknown) => void
@@ -1293,6 +1307,11 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
                     <Field label="Stock" tooltip="How many of this item the trader has in stock per restock cycle.">
                       <input type="number" className="input-field" value={item.stock}
                         onChange={e => onUpdate(i, 'stock', Number(e.target.value))} min={0} />
+                    </Field>
+
+                    <Field label="Stack Size (optional)" tooltip="How many are in one purchase — e.g. 30 for a pack of 30 rounds. Leave empty for single items.">
+                      <input type="number" className="input-field" value={item.stackSize ?? ''}
+                        onChange={e => onUpdate(i, 'stackSize', e.target.value ? Number(e.target.value) : undefined)} min={1} placeholder="e.g. 30" />
                     </Field>
 
                     <Toggle label="Unlimited Stock" value={item.unlimitedStock}
@@ -1447,6 +1466,36 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
                       </div>
                     )}
                   </div>
+
+                  {/* Ammo Box Helper — only shown when item TPL is a known ammo box */}
+                  {isAmmoBox(item.itemTpl) && (() => {
+                    const boxInfo = getAmmoBoxInfo(item.itemTpl)!
+                    const hasCartridgeChild = (item.children || []).some(c => c.slotId === 'cartridges')
+                    return (
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-sm font-semibold text-amber-400 flex items-center gap-1.5">
+                            <Package size={14} /> Ammo Box Setup
+                          </h4>
+                        </div>
+                        <p className="text-xs text-tarkov-text-dim mb-3">
+                          This is an ammo box. It needs a <span className="font-mono text-tarkov-text">cartridges</span> child item filled with the correct rounds, or it will appear empty in-game.
+                        </p>
+                        {hasCartridgeChild ? (
+                          <p className="text-xs text-tarkov-success flex items-center gap-1">
+                            <CheckCircle size={12} /> Cartridges child is configured below.
+                          </p>
+                        ) : (
+                          <button
+                            className="btn-primary text-xs flex items-center gap-1.5"
+                            onClick={() => onAddAmmoBoxChild(i, boxInfo.roundTpl, boxInfo.count)}
+                          >
+                            <Plus size={12} /> Auto-fill {boxInfo.count}× rounds ({boxInfo.roundTpl.slice(0, 8)}…)
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })()}
 
                   {/* Child Items (plates, attachments, weapon parts) */}
                   <div className="bg-tarkov-bg rounded-lg p-4">
