@@ -4,6 +4,7 @@ using SPTarkov.Server.Core.Models.Logging;
 using SPTarkov.Server.Core.Models.Utils;
 using SPTarkov.Server.Core.Services;
 using TraderGen.Models;
+using System.Globalization;
 
 namespace TraderGen.Services;
 
@@ -760,7 +761,7 @@ public static class QuestBuilder
                 ["index"] = idx++,
                 ["target"] = traderId,
                 ["type"] = "TraderStanding",
-                ["value"] = rewards.TraderStanding.ToString("F2"),
+                ["value"] = rewards.TraderStanding.ToString("F2", CultureInfo.InvariantCulture),
                 ["unknown"] = false,
             });
         }
