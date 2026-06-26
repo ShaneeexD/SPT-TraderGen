@@ -49,7 +49,7 @@ public class TraderGenPlugin(
     public async Task OnLoad()
     {
         logger.LogWithColor("[TraderGen] ====================================", LogTextColor.Cyan);
-        logger.LogWithColor("[TraderGen] TraderGen Framework v2.0.0 loading...", LogTextColor.Cyan);
+        logger.LogWithColor("[TraderGen] TraderGen Framework v2.0.2 loading...", LogTextColor.Cyan);
         logger.LogWithColor("[TraderGen] ====================================", LogTextColor.Cyan);
 
         // Load trader JSON files from traders/ directory
