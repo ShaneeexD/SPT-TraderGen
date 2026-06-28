@@ -45,6 +45,7 @@ public class TraderGenPlugin(
     ImageRouter imageRouter,
     WTTServerCommonLib.WTTServerCommonLib wttCommon,
     ProfileHelper profileHelper,
+    TraderHelper traderHelper,
     TimeUtil timeUtil
 ) : IOnLoad
 {
@@ -178,6 +179,10 @@ public class TraderGenPlugin(
         PocketServeFixPatch.BuildMap(modPath);
         PocketServeFixPatch.SetDependencies(profileHelper);
         new PocketServeFixPatch().Enable();
+
+        // Ensure traders exist in a profile before SPT unlocks them via TraderUnlock quest rewards.
+        TraderUnlockEnsureInProfilePatch.SetDependencies(traderHelper, profileHelper);
+        new TraderUnlockEnsureInProfilePatch().Enable();
 
         if (totalStoryQuests > 0)
         {
@@ -430,7 +435,7 @@ public class TraderGenPlugin(
 
             // Avoid duplicate unlock rewards for the same trader
             var existing = successRewards.FirstOrDefault(r =>
-                r.Type == RewardType.TraderUnlock && r.TraderId?.ToString() == trader.Id);
+                r.Type == RewardType.TraderUnlock && r.Target == trader.Id.ToString());
             if (existing != null)
             {
                 logger.LogWithColor(
@@ -439,15 +444,14 @@ public class TraderGenPlugin(
                 continue;
             }
 
-            var index = successRewards.Count;
             successRewards.Add(new SPTarkov.Server.Core.Models.Eft.Common.Tables.Reward
             {
                 Id = new MongoId(),
                 Type = RewardType.TraderUnlock,
+                Target = trader.Id,
                 TraderId = trader.Id,
-                Value = 0,
-                Index = index,
-                AvailableInGameEditions = [],
+                IsHidden = false,
+                Unknown = false,
             });
 
             patchedCount++;
