@@ -238,17 +238,19 @@ public class TraderGenPlugin(
             var packName = Path.GetFileName(pack.PackFolder);
             var zoneFile = Path.Combine(zoneOutputDir, $"{packName}_zones.json");
 
-            var wttZones = pack.Definition.Zones.Select(z => new WTTServerCommonLib.Models.CustomQuestZone
-            {
-                ZoneId = z.ZoneId,
-                ZoneName = z.ZoneName,
-                ZoneLocation = z.ZoneLocation.ToLowerInvariant(),
-                ZoneType = z.ZoneType,
-                FlareType = z.FlareType,
-                Position = new WTTServerCommonLib.Models.ZoneTransform(z.Position.X, z.Position.Y, z.Position.Z),
-                Rotation = new WTTServerCommonLib.Models.ZoneTransform(z.Rotation.X, z.Rotation.Y, z.Rotation.Z, z.Rotation.W),
-                Scale = new WTTServerCommonLib.Models.ZoneTransform(z.Scale.X, z.Scale.Y, z.Scale.Z),
-            }).ToList();
+            var wttZones = pack.Definition.Zones
+                .SelectMany(ExpandZoneLocation)
+                .Select(z => new WTTServerCommonLib.Models.CustomQuestZone
+                {
+                    ZoneId = z.ZoneId,
+                    ZoneName = z.ZoneName,
+                    ZoneLocation = z.ZoneLocation.ToLowerInvariant(),
+                    ZoneType = z.ZoneType,
+                    FlareType = z.FlareType,
+                    Position = new WTTServerCommonLib.Models.ZoneTransform(z.Position.X, z.Position.Y, z.Position.Z),
+                    Rotation = new WTTServerCommonLib.Models.ZoneTransform(z.Rotation.X, z.Rotation.Y, z.Rotation.Z, z.Rotation.W),
+                    Scale = new WTTServerCommonLib.Models.ZoneTransform(z.Scale.X, z.Scale.Y, z.Scale.Z),
+                }).ToList();
 
             File.WriteAllText(zoneFile, System.Text.Json.JsonSerializer.Serialize(wttZones, zoneJsonOpts));
         }
