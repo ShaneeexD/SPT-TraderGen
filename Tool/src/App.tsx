@@ -3,7 +3,7 @@ import {
   Store, Plus, Trash2, Download, AlertCircle, CheckCircle,
   ChevronDown, ChevronUp, Copy, RefreshCw, Eye, Package,
   Shield, Star, Settings, FileJson, HelpCircle, ExternalLink, Upload, Crosshair,
-  X, Tag, ClipboardPaste, BookOpen,
+  X, Tag, ClipboardPaste, BookOpen, Menu, Target,
 } from 'lucide-react'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
@@ -22,6 +22,76 @@ import { getVanillaTraderList, loadVanillaTraderById, loadVanillaQuestPackByTrad
 import { ChildItemTree } from './ChildItemTree'
 import { isAmmoBox, getAmmoBoxInfo } from './ammoBoxes'
 
+function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        onClose()
+      }
+    }
+    if (open) {
+      document.addEventListener('mousedown', handleClick)
+      return () => document.removeEventListener('mousedown', handleClick)
+    }
+  }, [open, onClose])
+
+  const links = [
+    { name: 'AmmoGen Tool', url: 'https://ammogen-tool.netlify.app', icon: <Target size={18} />, active: false },
+    { name: 'TraderGen Tool', url: 'https://tradergen-tool.netlify.app', icon: <Store size={18} />, active: true },
+  ]
+
+  return (
+    <>
+      {open && (
+        <div className="fixed inset-0 bg-black/50 z-40 transition-opacity" onClick={onClose} />
+      )}
+
+      <div
+        ref={ref}
+        className={`fixed top-0 left-0 h-full w-64 bg-tarkov-surface border-r border-tarkov-border z-50 transform transition-transform duration-200 ${
+          open ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex items-center justify-between px-4 py-4 border-b border-tarkov-border">
+          <div className="flex items-center gap-2 text-tarkov-accent">
+            <Store size={22} />
+            <span className="font-bold">Serenity Mods</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded hover:bg-tarkov-border/50 text-tarkov-text-dim hover:text-tarkov-text transition-colors"
+            aria-label="Close menu"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <nav className="p-2 space-y-1">
+          {links.map((link) => (
+            <a
+              key={link.name}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                link.active
+                  ? 'bg-tarkov-accent/20 text-tarkov-accent border border-tarkov-accent/50'
+                  : 'text-tarkov-text hover:bg-tarkov-border/50 hover:text-tarkov-text'
+              }`}
+            >
+              {link.icon}
+              <span className="flex-1">{link.name}</span>
+              <ExternalLink size={14} className="text-tarkov-text-dim" />
+            </a>
+          ))}
+        </nav>
+      </div>
+    </>
+  )
+}
+
 type Tab = 'general' | 'loyalty' | 'assort' | 'quests' | 'preview'
 
 export default function App() {
@@ -32,6 +102,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('general')
   const [expandedAssort, setExpandedAssort] = useState<Set<number>>(new Set())
   const [showExportSuccess, setShowExportSuccess] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [vanillaList, setVanillaList] = useState<{ id: string; nickname: string }[]>([])
   const [showVanillaDropdown, setShowVanillaDropdown] = useState(false)
   const [loadingVanilla, setLoadingVanilla] = useState(false)
@@ -658,9 +729,18 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
       {/* Header */}
       <header className="bg-tarkov-surface border-b border-tarkov-border px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 -ml-2 rounded-lg hover:bg-tarkov-border/50 text-tarkov-text-dim hover:text-tarkov-text transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu size={24} />
+          </button>
           <Store className="text-tarkov-accent" size={28} />
           <div>
             <h1 className="text-xl font-bold text-tarkov-accent">TraderGen Tool</h1>
