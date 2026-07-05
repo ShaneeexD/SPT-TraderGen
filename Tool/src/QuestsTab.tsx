@@ -1983,7 +1983,7 @@ function ZoneManager({ zones, onChange }: {
                       onChange={e => updateZone(i, { zoneName: e.target.value })}
                       placeholder="e.g. Checkpoint Alfa" />
                   </Field>
-                  <Field label="Map Location" tooltip="The SPT location ID for the map this zone is on.">
+                  <Field label="Map Location" tooltip="The SPT location ID for the exact map this zone is on. For Factory and Ground Zero, pick the specific variant (factory4_day / factory4_night / Sandbox / Sandbox_high) instead of the generic entry.">
                     <select className="input-field text-sm" value={zone.zoneLocation}
                       onChange={e => updateZone(i, { zoneLocation: e.target.value })}>
                       <option value="">-- Select Map --</option>
@@ -1992,13 +1992,13 @@ function ZoneManager({ zones, onChange }: {
                       ))}
                     </select>
                   </Field>
-                  <Field label="Zone Type" tooltip="Use 'Visit' for zone_visit, zone_kill, and leave_item_at_location quest objectives. Use 'Place Item' for zone_place_item objectives.">
+                  <Field label="Zone Type" tooltip="Use 'Visit' for zone_visit and zone_kill objectives. Use 'Place Item' for zone_place_item and leave_item_at_location objectives.">
                     <select className="input-field text-sm" value={zone.zoneType}
                       onChange={e => updateZone(i, { zoneType: e.target.value })}>
                       {ZONE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
                     <p className="text-xs text-tarkov-text-dim mt-1">
-                      Use <span className="font-semibold text-tarkov-text">Visit</span> for <em>Visit Zone</em>, <em>Kill in Zone</em>, and <em>Leave Item at Location</em> quest objectives.
+                      Use <span className="font-semibold text-tarkov-text">Place Item</span> for <em>Leave Item at Location</em> and <em>Place Item in Zone</em>. Use <span className="font-semibold text-tarkov-text">Visit</span> for <em>Visit Zone</em> and <em>Kill in Zone</em>.
                     </p>
                   </Field>
                 </div>

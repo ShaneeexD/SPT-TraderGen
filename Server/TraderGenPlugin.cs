@@ -11,6 +11,7 @@ using SPTarkov.Server.Core.Routers;
 using SPTarkov.Server.Core.Services;
 using SPTarkov.Server.Core.Utils;
 using TraderGen.Generators;
+using TraderGen.Models;
 using TraderGen.Patches;
 using TraderGen.Services;
 using TraderGen.Validation;
@@ -213,7 +214,8 @@ public class TraderGenPlugin(
     {
         var allZones = questPacks
             .SelectMany(p => p.Definition.Zones)
-            .ToList();
+            .SelectMany(ExpandZoneLocation)
+            .ToList<QuestZoneDefinition>();
 
         if (allZones.Count == 0)
             return;
@@ -466,5 +468,40 @@ public class TraderGenPlugin(
                 $"[TraderGen] Patched {patchedCount} external quest(s) with TraderUnlock rewards.",
                 LogTextColor.Green);
         }
+    }
+
+    // Factory and Ground Zero have multiple map variants. Expand a zone registered under the generic
+    // location so it is available in both variants (e.g. factory4_day and factory4_night).
+    private static IEnumerable<QuestZoneDefinition> ExpandZoneLocation(QuestZoneDefinition zone)
+    {
+        if (string.Equals(zone.ZoneLocation, "factory4", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return CloneQuestZone(zone, "factory4_day");
+            yield return CloneQuestZone(zone, "factory4_night");
+        }
+        else if (string.Equals(zone.ZoneLocation, "Sandbox", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return CloneQuestZone(zone, "Sandbox");
+            yield return CloneQuestZone(zone, "Sandbox_high");
+        }
+        else
+        {
+            yield return zone;
+        }
+    }
+
+    private static QuestZoneDefinition CloneQuestZone(QuestZoneDefinition source, string location)
+    {
+        return new QuestZoneDefinition
+        {
+            ZoneId = source.ZoneId,
+            ZoneName = source.ZoneName,
+            ZoneLocation = location,
+            ZoneType = source.ZoneType,
+            FlareType = source.FlareType,
+            Position = source.Position,
+            Rotation = source.Rotation,
+            Scale = source.Scale,
+        };
     }
 }
