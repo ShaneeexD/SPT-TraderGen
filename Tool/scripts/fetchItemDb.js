@@ -30,6 +30,7 @@ async function fetchDetails(ids) {
         id,
         name: detail.locale?.Name || detail.locale?.ShortName || detail.item?._name || '',
         parentId: parentId || null,
+        rarity: detail.item?._props?.RarityPvE || null,
         skipped: isQuestItem,
       }
     } catch (err) {
@@ -74,6 +75,7 @@ async function run() {
       id: entry.id,
       name: entry.name,
       parentId: detail.parentId,
+      rarity: detail.rarity,
       price: entry.price,
     })
     detailById.set(entry.id, out[out.length - 1])
@@ -88,7 +90,7 @@ async function run() {
     let added = 0
     for (const node of nodes) {
       if (!node || node.skipped) continue
-      const entry = { id: node.id, name: node.name || node.id, parentId: node.parentId, price: null }
+      const entry = { id: node.id, name: node.name || node.id, parentId: node.parentId, rarity: null, price: null }
       out.push(entry)
       detailById.set(node.id, entry)
       added++

@@ -1439,6 +1439,91 @@ function BulkEditModal({ open, count, loyaltyLevels, defaultCurrency, onClose, o
   )
 }
 
+/* ===== RARITY SORT MODAL ===== */
+function RaritySortModal({ open, rarities, loyaltyLevels, onClose, onApply }: {
+  open: boolean
+  rarities: string[]
+  loyaltyLevels: LoyaltyLevel[]
+  onClose: () => void
+  onApply: (mapping: Record<string, number>) => void
+}) {
+  const [mapping, setMapping] = useState<Record<string, number>>({})
+  const initialized = useRef(false)
+
+  useEffect(() => {
+    if (open && !initialized.current) {
+      initialized.current = true
+      setMapping(prev => {
+        const defaults: Record<string, number> = {
+          Common: 1,
+          Rare: 2,
+          Superrare: 3,
+          Not_exist: 4,
+        }
+        const initial: Record<string, number> = {}
+        for (const r of rarities) {
+          initial[r] = prev[r] ?? defaults[r] ?? 1
+        }
+        return initial
+      })
+    }
+    if (!open) initialized.current = false
+  }, [open, rarities])
+
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-tarkov-surface border border-tarkov-border rounded-lg w-full max-w-sm p-6 space-y-4 shadow-xl">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-tarkov-accent flex items-center gap-2">
+            <Star size={18} /> Sort by Rarity
+          </h3>
+          <button onClick={onClose} className="text-tarkov-text-dim hover:text-tarkov-text">
+            <X size={18} />
+          </button>
+        </div>
+
+        <p className="text-sm text-tarkov-text-dim">
+          Set the loyalty level for each rarity. Selected items will be updated to match.
+        </p>
+
+        <div className="space-y-3">
+          {rarities.length === 0 && (
+            <p className="text-sm text-tarkov-text-dim">No rarity data for selected items.</p>
+          )}
+          {rarities.map(rarity => (
+            <div key={rarity} className="flex items-center justify-between gap-3">
+              <div className="flex flex-col">
+                <span className="text-sm text-tarkov-text">
+                  {rarity.replace(/_/g, ' ')}
+                </span>
+                {rarity === 'Not_exist' && (
+                  <span className="text-xs text-tarkov-text-dim">rarest - no PvE spawn</span>
+                )}
+              </div>
+              <select
+                className="input-field text-sm w-40"
+                value={mapping[rarity] || ''}
+                onChange={e => setMapping(prev => ({ ...prev, [rarity]: Number(e.target.value) }))}
+              >
+                {loyaltyLevels.map(ll => (
+                  <option key={ll.level} value={ll.level}>Level {ll.level}</option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex justify-end gap-3 pt-2">
+          <button onClick={onClose} className="btn-secondary text-sm">Cancel</button>
+          <button onClick={() => onApply(mapping)} className="btn-primary text-sm">Apply</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ===== ASSORT TAB ===== */
 function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expanded, onToggle,
   onAdd, onAddItems, onRemove, onRemoveItems, onUpdate, onAddBarter, onRemoveBarter, onUpdateBarter,
@@ -1476,18 +1561,47 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bulkEditOpen, setBulkEditOpen] = useState(false)
+  const [raritySortOpen, setRaritySortOpen] = useState(false)
 
-  const filteredAssort = assort
+  const searchMatchedAssort = assort
     .map((item, index) => ({ item, index }))
     .filter(({ item }) => {
-      const matchesSearch = !searchQuery.trim() || (() => {
-        const q = searchQuery.toLowerCase()
-        const name = itemNames.get(item.itemTpl)?.toLowerCase() || ''
-        return item.itemTpl.toLowerCase().includes(q) || name.includes(q)
-      })()
-      const matchesLoyalty = loyaltyFilter === 'all' || item.loyaltyLevel === loyaltyFilter
-      return matchesSearch && matchesLoyalty
+      if (!searchQuery.trim()) return true
+      const q = searchQuery.toLowerCase()
+      const name = itemNames.get(item.itemTpl)?.toLowerCase() || ''
+      return item.itemTpl.toLowerCase().includes(q) || name.includes(q)
     })
+
+  const filteredAssort = searchMatchedAssort.filter(({ item }) => {
+    return loyaltyFilter === 'all' || item.loyaltyLevel === loyaltyFilter
+  })
+
+  const loyaltyCounts = useMemo(() => {
+    const counts = { all: assort.length, 1: 0, 2: 0, 3: 0, 4: 0 }
+    assort.forEach(item => {
+      if (item.loyaltyLevel >= 1 && item.loyaltyLevel <= 4) {
+        counts[item.loyaltyLevel as 1 | 2 | 3 | 4]++
+      }
+    })
+    return counts
+  }, [assort])
+
+  const selectedRarities = useMemo(() => {
+    const set = new Set<string>()
+    selected.forEach(index => {
+      const rarity = itemDb.get(assort[index].itemTpl)?.rarity
+      if (rarity) set.add(rarity)
+    })
+    const order = ['Common', 'Rare', 'Superrare', 'Not_exist']
+    return [...set].sort((a, b) => {
+      const ai = order.indexOf(a)
+      const bi = order.indexOf(b)
+      if (ai !== -1 && bi !== -1) return ai - bi
+      if (ai !== -1) return -1
+      if (bi !== -1) return 1
+      return a.localeCompare(b)
+    })
+  }, [selected, assort, itemDb])
 
   const categoryOptions = useMemo(() => {
     const vanillaById = new globalThis.Map<string, string>()
@@ -1584,13 +1698,16 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
             <button
               key={key}
               onClick={() => setLoyaltyFilter(key)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors min-w-[4.5rem] ${
                 loyaltyFilter === key
                   ? 'bg-tarkov-accent text-white'
                   : 'bg-tarkov-bg border border-tarkov-border text-tarkov-text-dim hover:text-tarkov-text'
               }`}
             >
-              {label}
+              <div className="flex flex-col items-center leading-tight">
+                <span>{label}</span>
+                <span className="text-[10px] opacity-80">{loyaltyCounts[key]}</span>
+              </div>
             </button>
           ))}
         </div>
@@ -1632,6 +1749,13 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
             className="text-xs btn-secondary flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Settings size={12} /> Edit Selected{selected.size > 0 && ` (${selected.size})`}
+          </button>
+          <button
+            onClick={() => setRaritySortOpen(true)}
+            disabled={selected.size === 0}
+            className="text-xs btn-secondary flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Star size={12} /> Sort by Rarity{selected.size > 0 && ` (${selected.size})`}
           </button>
           <button
             onClick={() => {
@@ -2010,6 +2134,23 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
             if (values.buyLimit !== undefined) onUpdate(index, 'buyLimit', values.buyLimit)
           })
           setBulkEditOpen(false)
+        }}
+      />
+
+      <RaritySortModal
+        open={raritySortOpen}
+        rarities={selectedRarities}
+        loyaltyLevels={loyaltyLevels}
+        onClose={() => setRaritySortOpen(false)}
+        onApply={mapping => {
+          selected.forEach(index => {
+            const rarity = itemDb.get(assort[index].itemTpl)?.rarity
+            if (rarity && mapping[rarity] !== undefined) {
+              onUpdate(index, 'loyaltyLevel', mapping[rarity])
+            }
+          })
+          setSelected(new Set())
+          setRaritySortOpen(false)
         }}
       />
     </div>

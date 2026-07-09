@@ -4,8 +4,9 @@ export interface ItemDbEntry {
   id: string
   name: string
   shortName?: string
-  parentId?: string
-  price?: number
+  parentId: string | null
+  rarity: string | null
+  price: number | null
 }
 
 let itemDb: Map<string, ItemDbEntry> | null = null
