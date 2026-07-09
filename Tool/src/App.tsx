@@ -3,7 +3,7 @@ import {
   Store, Plus, Trash2, Download, AlertCircle, CheckCircle,
   ChevronDown, ChevronUp, Copy, RefreshCw, Eye, Package,
   Shield, Star, Settings, FileJson, HelpCircle, ExternalLink, Upload, Crosshair,
-  X, Tag, ClipboardPaste, BookOpen, Menu, Target,
+  X, Tag, ClipboardPaste, BookOpen, Menu, Target, Map, Wrench,
 } from 'lucide-react'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
@@ -40,6 +40,9 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const links = [
     { name: 'AmmoGen Tool', url: 'https://ammogen-tool.netlify.app', icon: <Target size={18} />, active: false },
     { name: 'TraderGen Tool', url: 'https://tradergen-tool.netlify.app', icon: <Store size={18} />, active: true },
+    { name: 'ItemGen Tool', url: 'https://itemgen-tool.netlify.app', icon: <Package size={18} />, active: false },
+    { name: 'Map Editor Lite', url: 'https://mapeditorlite-tool.netlify.app', icon: <Map size={18} />, active: false },
+    { name: 'Serenity Workshop', url: 'https://serenity-workshop.netlify.app', icon: <Wrench size={18} />, active: false },
   ]
 
   return (
