@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   Store, Plus, Trash2, Download, AlertCircle, CheckCircle,
   ChevronDown, ChevronUp, Copy, RefreshCw, Eye, Package,
@@ -18,6 +18,7 @@ import {
 import { validateTrader, buildExportJson, validateQuestPack, buildQuestExportJson } from './validation'
 import QuestsTab from './QuestsTab'
 import { useItemNames } from './useItemNames'
+import { useItemDb, type ItemDbEntry, isItemInCategory } from './useItemDb'
 import { getVanillaTraderList, loadVanillaTraderById, loadVanillaQuestPackByTraderId } from './vanillaLoader'
 import { ChildItemTree } from './ChildItemTree'
 import { isAmmoBox, getAmmoBoxInfo } from './ammoBoxes'
@@ -451,6 +452,11 @@ export default function App() {
     setExpandedAssort(prev => new Set([...prev, trader.assort.length]))
   }, [trader.assort.length])
 
+  const addAssortItems = useCallback((items: AssortItem[]) => {
+    if (items.length === 0) return
+    setTrader(prev => ({ ...prev, assort: [...prev.assort, ...items] }))
+  }, [])
+
   const importFromClipboard = useCallback(async () => {
     let jsonText = ''
     try {
@@ -563,6 +569,25 @@ export default function App() {
   const removeAssortItem = useCallback((index: number) => {
     setTrader(prev => ({ ...prev, assort: prev.assort.filter((_, i) => i !== index) }))
     setExpandedAssort(prev => { const n = new Set(prev); n.delete(index); return n })
+  }, [])
+
+  const removeAssortItems = useCallback((indices: number[]) => {
+    if (indices.length === 0) return
+    const toRemove = new Set(indices)
+    setTrader(prev => ({
+      ...prev,
+      assort: prev.assort.filter((_, i) => !toRemove.has(i)),
+    }))
+    setExpandedAssort(prev => {
+      const sorted = [...toRemove].sort((a, b) => a - b)
+      const next = new Set<number>()
+      prev.forEach(i => {
+        if (toRemove.has(i)) return
+        const removedBefore = sorted.filter(j => j < i).length
+        next.add(i - removedBefore)
+      })
+      return next
+    })
   }, [])
 
   const updateAssortItem = useCallback((index: number, key: keyof AssortItem, value: unknown) => {
@@ -877,7 +902,9 @@ export default function App() {
             expanded={expandedAssort}
             onToggle={toggleAssort}
             onAdd={addAssortItem}
+            onAddItems={addAssortItems}
             onRemove={removeAssortItem}
+            onRemoveItems={removeAssortItems}
             onUpdate={updateAssortItem}
             onAddBarter={addBarter}
             onRemoveBarter={removeBarter}
@@ -1278,7 +1305,7 @@ function LoyaltyTab({ levels, insuranceEnabled, onAdd, onRemove, onUpdate }: {
 
 /* ===== ASSORT TAB ===== */
 function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expanded, onToggle,
-  onAdd, onRemove, onUpdate, onAddBarter, onRemoveBarter, onUpdateBarter,
+  onAdd, onAddItems, onRemove, onRemoveItems, onUpdate, onAddBarter, onRemoveBarter, onUpdateBarter,
   onAddAmmoBoxChild, onAddChild, onRemoveChild, onUpdateChild, onImportFromClipboard, errors }: {
   assort: AssortItem[]
   loyaltyLevels: LoyaltyLevel[]
@@ -1287,7 +1314,9 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
   expanded: Set<number>
   onToggle: (i: number) => void
   onAdd: () => void
+  onAddItems: (items: AssortItem[]) => void
   onRemove: (i: number) => void
+  onRemoveItems: (indices: number[]) => void
   onUpdate: (i: number, key: keyof AssortItem, value: unknown) => void
   onAddBarter: (i: number) => void
   onRemoveBarter: (ai: number, bi: number) => void
@@ -1303,16 +1332,57 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
   const barterIds = assort.flatMap(a => (a.barter || []).map(b => b.itemTpl)).filter(id => id.length === 24)
   const allIds = [...new Set([...itemIds, ...barterIds])]
   const itemNames = useItemNames(allIds)
+  const itemDb = useItemDb()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [otherQuestMode, setOtherQuestMode] = useState<Set<number>>(new Set())
-  const filteredAssort = searchQuery.trim()
-    ? assort.filter((item) => {
+  const [loyaltyFilter, setLoyaltyFilter] = useState<'all' | 1 | 2 | 3 | 4>('all')
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+
+  const filteredAssort = assort
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => {
+      const matchesSearch = !searchQuery.trim() || (() => {
         const q = searchQuery.toLowerCase()
         const name = itemNames.get(item.itemTpl)?.toLowerCase() || ''
         return item.itemTpl.toLowerCase().includes(q) || name.includes(q)
-      })
-    : assort
+      })()
+      const matchesLoyalty = loyaltyFilter === 'all' || item.loyaltyLevel === loyaltyFilter
+      return matchesSearch && matchesLoyalty
+    })
+
+  const categoryOptions = useMemo(() => {
+    const vanillaById = new globalThis.Map<string, string>()
+    for (const c of VANILLA_BUY_CATEGORIES) vanillaById.set(c.id, c.name)
+    const cats = new globalThis.Map<string, string>()
+    for (const entry of itemDb.values()) {
+      if (!entry.parentId) continue
+      const parent = itemDb.get(entry.parentId)
+      if (!parent) continue
+      const name = vanillaById.get(parent.id) || parent.name || parent.id
+      cats.set(parent.id, name)
+    }
+    return [...cats.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [itemDb])
+
+  const categoryItems = selectedCategory
+    ? Array.from(itemDb.values()).filter(e => isItemInCategory(e, selectedCategory, itemDb))
+    : []
+
+  const addableCategoryItems = categoryItems.filter(e => typeof e.price === 'number' && e.price > 0)
+
+  const addCategoryToAssort = () => {
+    if (addableCategoryItems.length === 0) return
+    const newItems: AssortItem[] = addableCategoryItems.map(e => ({
+      ...createDefaultAssortItem(),
+      itemTpl: e.id,
+      price: e.price!,
+    }))
+    onAddItems(newItems)
+  }
 
   return (
     <div className="space-y-4">
@@ -1334,17 +1404,104 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
         </div>
       </div>
 
-      <div className="bg-tarkov-surface border border-tarkov-border rounded-lg px-4 py-2.5 text-sm text-tarkov-text-dim flex items-center gap-2">
-        <HelpCircle size={14} className="text-tarkov-accent shrink-0" />
-        Need item IDs? Search for items at{' '}
-        <a href="https://db.sp-tarkov.com/search" target="_blank" rel="noopener noreferrer"
-          className="text-tarkov-accent hover:text-tarkov-accent-hover underline">db.sp-tarkov.com/search</a>
-        {' '}and copy the template ID.
+      <div className="bg-tarkov-surface border border-tarkov-border rounded-lg p-4 space-y-4">
+        <div className="flex items-start gap-2 text-sm text-tarkov-text-dim">
+          <HelpCircle size={14} className="text-tarkov-accent shrink-0 mt-0.5" />
+          <p>
+            Need item IDs? Search for items at{' '}
+            <a href="https://db.sp-tarkov.com/search" target="_blank" rel="noopener noreferrer"
+              className="text-tarkov-accent hover:text-tarkov-accent-hover underline">db.sp-tarkov.com/search</a>
+            {' '}and copy the template ID.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          <select
+            className="input-field text-sm flex-1"
+            value={selectedCategory}
+            onChange={e => setSelectedCategory(e.target.value)}
+          >
+            <option value="">-- Select category to bulk add --</option>
+            {categoryOptions.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+          <button
+            onClick={addCategoryToAssort}
+            disabled={!selectedCategory || addableCategoryItems.length === 0}
+            className="btn-primary text-sm flex items-center gap-1.5 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Plus size={14} />
+            Add {selectedCategory && addableCategoryItems.length > 0 && `(${addableCategoryItems.length})`}
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {([
+            { key: 'all', label: 'All' },
+            { key: 1, label: 'Level 1' },
+            { key: 2, label: 'Level 2' },
+            { key: 3, label: 'Level 3' },
+            { key: 4, label: 'Level 4' },
+          ] as const).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setLoyaltyFilter(key)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                loyaltyFilter === key
+                  ? 'bg-tarkov-accent text-white'
+                  : 'bg-tarkov-bg border border-tarkov-border text-tarkov-text-dim hover:text-tarkov-text'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {assort.length === 0 && (
         <div className="card text-center text-tarkov-text-dim py-8">
           No items in assortment. Add items the trader will sell.
+        </div>
+      )}
+
+      {assort.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => {
+              const allSelected = filteredAssort.length > 0 && filteredAssort.every(({ index }) => selected.has(index))
+              const n = new Set(selected)
+              if (allSelected) {
+                filteredAssort.forEach(({ index }) => n.delete(index))
+              } else {
+                filteredAssort.forEach(({ index }) => n.add(index))
+              }
+              setSelected(n)
+            }}
+            className="text-xs btn-secondary flex items-center gap-1.5"
+          >
+            {filteredAssort.length > 0 && filteredAssort.every(({ index }) => selected.has(index)) ? 'Deselect All' : 'Select All'}
+          </button>
+          <button
+            onClick={() => setSelected(new Set())}
+            disabled={selected.size === 0}
+            className="text-xs btn-secondary flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Select None
+          </button>
+          <button
+            onClick={() => {
+              onRemoveItems([...selected])
+              setSelected(new Set())
+            }}
+            disabled={selected.size === 0}
+            className="text-xs bg-tarkov-error/20 text-tarkov-error hover:bg-tarkov-error/30 border border-tarkov-error/50 px-3 py-1.5 rounded-lg flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Trash2 size={12} /> Delete Selected{selected.size > 0 && ` (${selected.size})`}
+          </button>
+          {selected.size > 0 && (
+            <span className="text-xs text-tarkov-text-dim">{selected.size} selected</span>
+          )}
         </div>
       )}
 
@@ -1370,16 +1527,29 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
       )}
 
       <div className="space-y-2" id="assort-list-top">
-        {filteredAssort.map((item, i) => {
-          const isExpanded = expanded.has(i)
-          const itemErrors = errors.filter(e => e.field.startsWith(`assort.${i}`))
+        {filteredAssort.map(({ item, index }) => {
+          const isExpanded = expanded.has(index)
+          const itemErrors = errors.filter(e => e.field.startsWith(`assort.${index}`))
           const isBarter = item.barter && item.barter.length > 0
+          const isSelected = selected.has(index)
 
           return (
-            <div key={i} className={`card ${itemErrors.length > 0 ? 'border-tarkov-error/50' : ''}`}>
+            <div key={index} className={`card ${itemErrors.length > 0 ? 'border-tarkov-error/50' : ''}`}>
               {/* Collapsed header */}
-              <div className="flex items-center justify-between cursor-pointer" onClick={() => onToggle(i)}>
+              <div className="flex items-center justify-between cursor-pointer" onClick={() => onToggle(index)}>
                 <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onClick={e => e.stopPropagation()}
+                    onChange={e => {
+                      const n = new Set(selected)
+                      if (e.target.checked) n.add(index)
+                      else n.delete(index)
+                      setSelected(n)
+                    }}
+                    className="w-4 h-4 accent-tarkov-accent"
+                  />
                   {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   <span className="font-mono text-sm text-tarkov-text-dim">
                     {item.itemTpl || '(no template ID)'}
@@ -1406,7 +1576,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
                     <AlertCircle size={14} className="text-tarkov-error" />
                   )}
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); onRemove(i) }}
+                <button onClick={(e) => { e.stopPropagation(); onRemove(index) }}
                   className="text-tarkov-error hover:text-tarkov-error/80 transition-colors p-1">
                   <Trash2 size={14} />
                 </button>
@@ -1418,7 +1588,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Field label="Item Template ID" tooltip="The 24-character hex ID of the item from the SPT database. Find IDs at db.sp-tarkov.com/search">
                       <input className="input-field font-mono text-sm" value={item.itemTpl}
-                        onChange={e => onUpdate(i, 'itemTpl', e.target.value)}
+                        onChange={e => onUpdate(index, 'itemTpl', e.target.value)}
                         placeholder="24-char hex ID from SPT database" maxLength={24} />
                       <p className="text-xs text-tarkov-text-dim mt-1">
                         Find IDs at{' '}
@@ -1429,7 +1599,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
 
                     <Field label="Loyalty Level" tooltip="Which loyalty tier is required to see this item. Must match one of the levels defined in the Loyalty Levels tab.">
                       <select className="input-field" value={item.loyaltyLevel}
-                        onChange={e => onUpdate(i, 'loyaltyLevel', Number(e.target.value))}>
+                        onChange={e => onUpdate(index, 'loyaltyLevel', Number(e.target.value))}>
                         {loyaltyLevels.map(ll => (
                           <option key={ll.level} value={ll.level}>Level {ll.level}</option>
                         ))}
@@ -1440,28 +1610,28 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <Field label="Stock" tooltip="How many of this item the trader has in stock per restock cycle.">
                       <input type="number" className="input-field" value={item.stock}
-                        onChange={e => onUpdate(i, 'stock', Number(e.target.value))} min={0} />
+                        onChange={e => onUpdate(index, 'stock', Number(e.target.value))} min={0} />
                     </Field>
 
                     <Field label="Stack Size (optional)" tooltip="How many are in one purchase — e.g. 30 for a pack of 30 rounds. Leave empty for single items.">
                       <input type="number" className="input-field" value={item.stackSize ?? ''}
-                        onChange={e => onUpdate(i, 'stackSize', e.target.value ? Number(e.target.value) : undefined)} min={1} placeholder="e.g. 30" />
+                        onChange={e => onUpdate(index, 'stackSize', e.target.value ? Number(e.target.value) : undefined)} min={1} placeholder="e.g. 30" />
                     </Field>
 
                     <Toggle label="Unlimited Stock" value={item.unlimitedStock}
-                      onChange={v => onUpdate(i, 'unlimitedStock', v)}
+                      onChange={v => onUpdate(index, 'unlimitedStock', v)}
                       tooltip="If on, the trader never runs out of this item." />
 
                     <Field label="Buy Limit (0 = none)" tooltip="Maximum number of this item a player can buy per restock. Set to 0 for no limit.">
                       <input type="number" className="input-field" value={item.buyLimit}
-                        onChange={e => onUpdate(i, 'buyLimit', Number(e.target.value))} min={0} />
+                        onChange={e => onUpdate(index, 'buyLimit', Number(e.target.value))} min={0} />
                     </Field>
 
                     <Field label="Locked by Quest" tooltip="Item is hidden until the player completes the selected quest. Choose from this trader's quests or enter an external ID.">
                       {(() => {
                         const ownQuestIds = new Set(storyQuests.map(q => q.id))
                         const isOwn = item.lockedByQuest ? ownQuestIds.has(item.lockedByQuest) : false
-                        const isOtherMode = otherQuestMode.has(i) || (!!item.lockedByQuest && !isOwn)
+                        const isOtherMode = otherQuestMode.has(index) || (!!item.lockedByQuest && !isOwn)
                         const selectVal = isOtherMode ? '__other__' : (item.lockedByQuest || '')
                         return (
                           <div className="flex flex-col gap-1">
@@ -1471,14 +1641,14 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
                               onChange={e => {
                                 const v = e.target.value
                                 if (v === '') {
-                                  setOtherQuestMode(prev => { const n = new Set(prev); n.delete(i); return n })
-                                  onUpdate(i, 'lockedByQuest', undefined)
+                                  setOtherQuestMode(prev => { const n = new Set(prev); n.delete(index); return n })
+                                  onUpdate(index, 'lockedByQuest', undefined)
                                 } else if (v === '__other__') {
-                                  setOtherQuestMode(prev => new Set([...prev, i]))
-                                  onUpdate(i, 'lockedByQuest', undefined)
+                                  setOtherQuestMode(prev => new Set([...prev, index]))
+                                  onUpdate(index, 'lockedByQuest', undefined)
                                 } else {
-                                  setOtherQuestMode(prev => { const n = new Set(prev); n.delete(i); return n })
-                                  onUpdate(i, 'lockedByQuest', v)
+                                  setOtherQuestMode(prev => { const n = new Set(prev); n.delete(index); return n })
+                                  onUpdate(index, 'lockedByQuest', v)
                                 }
                               }}
                             >
@@ -1492,7 +1662,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
                               <input
                                 className="input-field font-mono text-sm"
                                 value={item.lockedByQuest || ''}
-                                onChange={e => onUpdate(i, 'lockedByQuest', e.target.value || undefined)}
+                                onChange={e => onUpdate(index, 'lockedByQuest', e.target.value || undefined)}
                                 placeholder="24-char external quest ID"
                                 maxLength={24}
                                 autoFocus
@@ -1512,13 +1682,13 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
                       </h4>
                       <div className="flex gap-2">
                         {!isBarter && (
-                          <button onClick={() => { onAddBarter(i); onUpdate(i, 'price', 0) }}
+                          <button onClick={() => { onAddBarter(index); onUpdate(index, 'price', 0) }}
                             className="text-xs btn-secondary px-2 py-1">
                             Switch to Barter
                           </button>
                         )}
                         {isBarter && (
-                          <button onClick={() => onUpdate(i, 'barter', undefined)}
+                          <button onClick={() => onUpdate(index, 'barter', undefined)}
                             className="text-xs btn-secondary px-2 py-1">
                             Switch to Money
                           </button>
@@ -1530,11 +1700,11 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
                       <div className="grid grid-cols-2 gap-4">
                         <Field label="Price" tooltip="The cost of this item in the selected currency.">
                           <input type="number" className="input-field" value={item.price}
-                            onChange={e => onUpdate(i, 'price', Number(e.target.value))} min={0} />
+                            onChange={e => onUpdate(index, 'price', Number(e.target.value))} min={0} />
                         </Field>
                         <Field label="Currency (override)" tooltip="Override the trader's default currency for this specific item. Leave as default to use the trader's currency.">
                           <select className="input-field" value={item.currency || ''}
-                            onChange={e => onUpdate(i, 'currency', e.target.value || undefined)}>
+                            onChange={e => onUpdate(index, 'currency', e.target.value || undefined)}>
                             <option value="">Use trader default ({defaultCurrency})</option>
                             <option value="RUB">Roubles (RUB)</option>
                             <option value="USD">Dollars (USD)</option>
@@ -1554,7 +1724,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
                                 <div className="flex-1">
                                   <label className="label">Item Template ID</label>
                                   <input className="input-field font-mono text-sm" value={b.itemTpl}
-                                    onChange={e => onUpdateBarter(i, j, 'itemTpl', e.target.value)}
+                                    onChange={e => onUpdateBarter(index, j, 'itemTpl', e.target.value)}
                                     placeholder="24-char hex ID" maxLength={24} />
                                   {itemNames.get(b.itemTpl) && (
                                     <p className="text-xs text-tarkov-text italic mt-1 truncate">
@@ -1565,9 +1735,9 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
                                 <div className="w-24">
                                   <label className="label">Count</label>
                                   <input type="number" className="input-field" value={b.count}
-                                    onChange={e => onUpdateBarter(i, j, 'count', Number(e.target.value))} min={1} />
+                                    onChange={e => onUpdateBarter(index, j, 'count', Number(e.target.value))} min={1} />
                                 </div>
-                                <button onClick={() => onRemoveBarter(i, j)}
+                                <button onClick={() => onRemoveBarter(index, j)}
                                   className="text-tarkov-error hover:text-tarkov-error/80 mb-2">
                                   <Trash2 size={14} />
                                 </button>
@@ -1577,13 +1747,13 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
                                   <div className="w-24">
                                     <label className="label">Dogtag Level</label>
                                     <input type="number" className="input-field" value={b.level ?? 1}
-                                      onChange={e => onUpdateBarter(i, j, 'level', Number(e.target.value))} min={1} />
+                                      onChange={e => onUpdateBarter(index, j, 'level', Number(e.target.value))} min={1} />
                                   </div>
                                   <div className="w-32">
                                     <label className="label">Dogtag Side</label>
                                     <select className="input-field text-sm"
                                       value={b.side || 'Any'}
-                                      onChange={e => onUpdateBarter(i, j, 'side', e.target.value)}>
+                                      onChange={e => onUpdateBarter(index, j, 'side', e.target.value)}>
                                       <option value="Bear">Bear</option>
                                       <option value="Usec">Usec</option>
                                       <option value="Any">Any</option>
@@ -1594,7 +1764,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
                             </div>
                           )
                         })}
-                        <button onClick={() => onAddBarter(i)} className="text-xs btn-secondary flex items-center gap-1 mt-2">
+                        <button onClick={() => onAddBarter(index)} className="text-xs btn-secondary flex items-center gap-1 mt-2">
                           <Plus size={12} /> Add Barter Item
                         </button>
                       </div>
@@ -1622,7 +1792,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
                         ) : (
                           <button
                             className="btn-primary text-xs flex items-center gap-1.5"
-                            onClick={() => onAddAmmoBoxChild(i, boxInfo.roundTpl, boxInfo.count)}
+                            onClick={() => onAddAmmoBoxChild(index, boxInfo.roundTpl, boxInfo.count)}
                           >
                             <Plus size={12} /> Auto-fill {boxInfo.count}× rounds ({boxInfo.roundTpl.slice(0, 8)}…)
                           </button>
@@ -1635,16 +1805,16 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
                   <div className="bg-tarkov-bg rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-sm font-semibold text-tarkov-text-dim">Child Items / Attachments</h4>
-                      <button onClick={() => onAddChild(i, [])} className="text-xs btn-secondary flex items-center gap-1">
+                      <button onClick={() => onAddChild(index, [])} className="text-xs btn-secondary flex items-center gap-1">
                         <Plus size={12} /> Add Attachment
                       </button>
                     </div>
                     <ChildItemTree
                       children={item.children || []}
                       path={[]}
-                      onAdd={(path) => onAddChild(i, path)}
-                      onRemove={(path) => onRemoveChild(i, path)}
-                      onUpdate={(path, key, value) => onUpdateChild(i, path, key, value)}
+                      onAdd={(path) => onAddChild(index, path)}
+                      onRemove={(path) => onRemoveChild(index, path)}
+                      onUpdate={(path, key, value) => onUpdateChild(index, path, key, value)}
                     />
                   </div>
 
@@ -1690,13 +1860,18 @@ function PreviewTab({ trader, questPack, onValidate }: {
 }) {
   const [validateResult, setValidateResult] = useState<'pass' | 'fail' | null>(null)
   const [copied, setCopied] = useState(false)
-  const [previewFile, setPreviewFile] = useState<'trader' | 'quests'>('trader')
+  const [previewFile, setPreviewFile] = useState<'trader' | 'quests' | 'items'>('trader')
 
   const traderJson = JSON.stringify(buildExportJson(trader), null, 2)
   const questJson = buildQuestExportJson(questPack)
   const questJsonStr = questJson ? JSON.stringify(questJson, null, 2) : null
+  const itemsJson = JSON.stringify(trader.assort, null, 2)
 
-  const activeJson = previewFile === 'trader' ? traderJson : (questJsonStr || '// No quests defined')
+  const activeJson = previewFile === 'trader'
+    ? traderJson
+    : previewFile === 'items'
+      ? (itemsJson || '// No items in assortment')
+      : (questJsonStr || '// No quests defined')
 
   const handleValidate = () => {
     const isValid = onValidate()
@@ -1742,6 +1917,15 @@ function PreviewTab({ trader, questPack, onValidate }: {
             previewFile === 'trader' ? 'bg-tarkov-accent text-tarkov-bg' : 'text-tarkov-text-dim hover:text-tarkov-text'
           }`}
         >trader.json</button>
+        <button
+          onClick={() => setPreviewFile('items')}
+          className={`flex-1 px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+            previewFile === 'items' ? 'bg-tarkov-accent text-tarkov-bg' : 'text-tarkov-text-dim hover:text-tarkov-text'
+          }`}
+        >
+          items.json
+          {trader.assort.length === 0 && <span className="ml-1 text-xs opacity-60">(empty)</span>}
+        </button>
         <button
           onClick={() => setPreviewFile('quests')}
           className={`flex-1 px-4 py-1.5 rounded text-sm font-medium transition-colors ${
