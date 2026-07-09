@@ -1303,6 +1303,142 @@ function LoyaltyTab({ levels, insuranceEnabled, onAdd, onRemove, onUpdate }: {
   )
 }
 
+/* ===== BULK EDIT MODAL ===== */
+function BulkEditModal({ open, count, loyaltyLevels, defaultCurrency, onClose, onApply }: {
+  open: boolean
+  count: number
+  loyaltyLevels: LoyaltyLevel[]
+  defaultCurrency: string
+  onClose: () => void
+  onApply: (values: {
+    loyaltyLevel?: number
+    price?: number
+    currency?: string | null
+    stock?: number
+    stackSize?: number | null
+    unlimitedStock?: boolean
+    buyLimit?: number
+  }) => void
+}) {
+  const [loyaltyLevel, setLoyaltyLevel] = useState('')
+  const [price, setPrice] = useState('')
+  const [currency, setCurrency] = useState('')
+  const [stock, setStock] = useState('')
+  const [stackSize, setStackSize] = useState('')
+  const [clearStackSize, setClearStackSize] = useState(false)
+  const [unlimitedStock, setUnlimitedStock] = useState('')
+  const [buyLimit, setBuyLimit] = useState('')
+
+  useEffect(() => {
+    if (open) {
+      setLoyaltyLevel('')
+      setPrice('')
+      setCurrency('')
+      setStock('')
+      setStackSize('')
+      setClearStackSize(false)
+      setUnlimitedStock('')
+      setBuyLimit('')
+    }
+  }, [open])
+
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-tarkov-surface border border-tarkov-border rounded-lg w-full max-w-md p-6 space-y-4 shadow-xl">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-tarkov-accent">Bulk Edit ({count} items)</h3>
+          <button onClick={onClose} className="text-tarkov-text-dim hover:text-tarkov-text">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="label">Loyalty Level</label>
+            <select className="input-field text-sm" value={loyaltyLevel} onChange={e => setLoyaltyLevel(e.target.value)}>
+              <option value="">-- no change --</option>
+              {loyaltyLevels.map(ll => (
+                <option key={ll.level} value={ll.level}>Level {ll.level}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="label">Price</label>
+            <input type="number" className="input-field text-sm" value={price}
+              onChange={e => setPrice(e.target.value)} min={0} placeholder="no change" />
+          </div>
+
+          <div>
+            <label className="label">Currency Override</label>
+            <select className="input-field text-sm" value={currency} onChange={e => setCurrency(e.target.value)}>
+              <option value="">-- no change --</option>
+              <option value="__default__">Use trader default ({defaultCurrency})</option>
+              <option value="RUB">Roubles (RUB)</option>
+              <option value="USD">Dollars (USD)</option>
+              <option value="EUR">Euros (EUR)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="label">Stock</label>
+            <input type="number" className="input-field text-sm" value={stock}
+              onChange={e => setStock(e.target.value)} min={0} placeholder="no change" />
+          </div>
+
+          <div>
+            <label className="label">Stack Size</label>
+            <input type="number" className="input-field text-sm" value={stackSize}
+              onChange={e => setStackSize(e.target.value)} min={1} placeholder="no change" />
+            <label className="flex items-center gap-2 mt-2 text-xs text-tarkov-text-dim">
+              <input type="checkbox" checked={clearStackSize} onChange={e => setClearStackSize(e.target.checked)} className="w-4 h-4" />
+              Clear stack size
+            </label>
+          </div>
+
+          <div>
+            <label className="label">Unlimited Stock</label>
+            <select className="input-field text-sm" value={unlimitedStock} onChange={e => setUnlimitedStock(e.target.value)}>
+              <option value="">-- no change --</option>
+              <option value="true">On</option>
+              <option value="false">Off</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="label">Buy Limit (0 = none)</label>
+            <input type="number" className="input-field text-sm" value={buyLimit}
+              onChange={e => setBuyLimit(e.target.value)} min={0} placeholder="no change" />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-2">
+          <button onClick={onClose} className="btn-secondary text-sm">Cancel</button>
+          <button
+            onClick={() => {
+              const values: Parameters<typeof onApply>[0] = {}
+              if (loyaltyLevel) values.loyaltyLevel = Number(loyaltyLevel)
+              if (price !== '') values.price = Number(price)
+              if (currency) values.currency = currency === '__default__' ? null : currency
+              if (stock !== '') values.stock = Number(stock)
+              if (clearStackSize) values.stackSize = null
+              else if (stackSize !== '') values.stackSize = Number(stackSize)
+              if (unlimitedStock) values.unlimitedStock = unlimitedStock === 'true'
+              if (buyLimit !== '') values.buyLimit = Number(buyLimit)
+              onApply(values)
+            }}
+            className="btn-primary text-sm"
+          >
+            Apply
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ===== ASSORT TAB ===== */
 function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expanded, onToggle,
   onAdd, onAddItems, onRemove, onRemoveItems, onUpdate, onAddBarter, onRemoveBarter, onUpdateBarter,
@@ -1339,6 +1475,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
   const [loyaltyFilter, setLoyaltyFilter] = useState<'all' | 1 | 2 | 3 | 4>('all')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [bulkEditOpen, setBulkEditOpen] = useState(false)
 
   const filteredAssort = assort
     .map((item, index) => ({ item, index }))
@@ -1488,6 +1625,13 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
             className="text-xs btn-secondary flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Select None
+          </button>
+          <button
+            onClick={() => setBulkEditOpen(true)}
+            disabled={selected.size === 0}
+            className="text-xs btn-secondary flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Settings size={12} /> Edit Selected{selected.size > 0 && ` (${selected.size})`}
           </button>
           <button
             onClick={() => {
@@ -1848,6 +1992,26 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
           </button>
         </div>
       )}
+
+      <BulkEditModal
+        open={bulkEditOpen}
+        count={selected.size}
+        loyaltyLevels={loyaltyLevels}
+        defaultCurrency={defaultCurrency}
+        onClose={() => setBulkEditOpen(false)}
+        onApply={values => {
+          selected.forEach(index => {
+            if (values.loyaltyLevel !== undefined) onUpdate(index, 'loyaltyLevel', values.loyaltyLevel)
+            if (values.price !== undefined) onUpdate(index, 'price', values.price)
+            if (values.currency !== undefined) onUpdate(index, 'currency', values.currency ?? undefined)
+            if (values.stock !== undefined) onUpdate(index, 'stock', values.stock)
+            if (values.stackSize !== undefined) onUpdate(index, 'stackSize', values.stackSize ?? undefined)
+            if (values.unlimitedStock !== undefined) onUpdate(index, 'unlimitedStock', values.unlimitedStock)
+            if (values.buyLimit !== undefined) onUpdate(index, 'buyLimit', values.buyLimit)
+          })
+          setBulkEditOpen(false)
+        }}
+      />
     </div>
   )
 }
