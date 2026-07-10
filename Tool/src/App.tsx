@@ -330,8 +330,8 @@ export default function App() {
           let avatarFile: JSZip.JSZipObject | null = null
           let questFile: JSZip.JSZipObject | null = null
           let questIconFile: JSZip.JSZipObject | null = null
-          const perQuestIcons: Map<string, JSZip.JSZipObject> = new Map()
-          const perTemplateIcons: Map<string, JSZip.JSZipObject> = new Map()
+          const perQuestIcons = new globalThis.Map<string, JSZip.JSZipObject>()
+          const perTemplateIcons = new globalThis.Map<string, JSZip.JSZipObject>()
           let packName = ''
 
           for (const [path, entry] of Object.entries(zip.files)) {
@@ -389,13 +389,13 @@ export default function App() {
           }
 
           // Resolve per-quest icon data URLs
-          const perQuestIconDataUrls: Map<string, string> = new Map()
+          const perQuestIconDataUrls = new globalThis.Map<string, string>()
           for (const [questId, entry] of perQuestIcons) {
             const base64 = await entry.async('base64')
             perQuestIconDataUrls.set(questId, `data:image/png;base64,${base64}`)
           }
           // Resolve rotating template icon data URLs
-          const perTemplateIconDataUrls: Map<string, string> = new Map()
+          const perTemplateIconDataUrls = new globalThis.Map<string, string>()
           for (const [tplId, entry] of perTemplateIcons) {
             const base64 = await entry.async('base64')
             const ext = entry.name.split('.').pop()?.toLowerCase() || 'jpg'
