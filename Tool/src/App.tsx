@@ -106,6 +106,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('general')
   const [expandedAssort, setExpandedAssort] = useState<Set<number>>(new Set())
   const [showExportSuccess, setShowExportSuccess] = useState(false)
+  const [exportSuccessMessage, setExportSuccessMessage] = useState('')
+  const [showExportDropdown, setShowExportDropdown] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [vanillaList, setVanillaList] = useState<{ id: string; nickname: string }[]>([])
   const [showVanillaDropdown, setShowVanillaDropdown] = useState(false)
@@ -202,6 +204,22 @@ export default function App() {
 
     const blob = await zip.generateAsync({ type: 'blob' })
     saveAs(blob, `${packName}.zip`)
+    setExportSuccessMessage('Trader pack exported as ZIP!')
+    setShowExportSuccess(true)
+    setTimeout(() => setShowExportSuccess(false), 3000)
+  }, [trader, validate])
+
+  const handleExportJson = useCallback(() => {
+    if (!validate()) {
+      setActiveTab('general')
+      return
+    }
+    const json = buildExportJson(trader)
+    const jsonStr = JSON.stringify(json, null, 2)
+    const packName = trader.packName.trim() || 'MyTraderPack'
+    const blob = new Blob([jsonStr], { type: 'application/json' })
+    saveAs(blob, `${packName}.json`)
+    setExportSuccessMessage('trader.json exported!')
     setShowExportSuccess(true)
     setTimeout(() => setShowExportSuccess(false), 3000)
   }, [trader, validate])
@@ -821,16 +839,37 @@ export default function App() {
             className="btn-secondary text-sm flex items-center gap-1.5">
             <Plus size={14} /> New Trader
           </button>
-          <button onClick={handleExport} className="btn-primary text-sm flex items-center gap-1.5">
-            <Download size={14} /> Export
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowExportDropdown(prev => !prev)}
+              className="btn-primary text-sm flex items-center gap-1.5"
+            >
+              <Download size={14} /> Export <ChevronDown size={14} />
+            </button>
+            {showExportDropdown && (
+              <div className="absolute right-0 mt-2 w-52 bg-tarkov-surface border border-tarkov-border rounded-lg shadow-xl z-50 overflow-hidden">
+                <button
+                  onClick={() => { setShowExportDropdown(false); handleExport() }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-tarkov-text hover:bg-tarkov-accent/10 hover:text-tarkov-accent transition-colors border-b border-tarkov-border flex items-center gap-2"
+                >
+                  <Package size={14} /> Export as ZIP
+                </button>
+                <button
+                  onClick={() => { setShowExportDropdown(false); handleExportJson() }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-tarkov-text hover:bg-tarkov-accent/10 hover:text-tarkov-accent transition-colors flex items-center gap-2"
+                >
+                  <FileJson size={14} /> Export trader.json
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
       {/* Success toast */}
       {showExportSuccess && (
         <div className="fixed top-4 right-4 z-50 bg-tarkov-success/20 border border-tarkov-success/50 text-tarkov-success px-4 py-3 rounded-lg flex items-center gap-2 shadow-lg">
-          <CheckCircle size={18} /> Trader pack exported as ZIP!
+          <CheckCircle size={18} /> {exportSuccessMessage}
         </div>
       )}
 
