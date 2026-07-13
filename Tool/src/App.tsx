@@ -447,8 +447,11 @@ export default function App() {
     }))
   }, [])
 
-  const addAssortItem = useCallback(() => {
-    setTrader(prev => ({ ...prev, assort: [...prev.assort, createDefaultAssortItem()] }))
+  const addAssortItem = useCallback((loyaltyLevel?: number) => {
+    setTrader(prev => ({
+      ...prev,
+      assort: [...prev.assort, { ...createDefaultAssortItem(), loyaltyLevel: loyaltyLevel ?? 1 }],
+    }))
     setExpandedAssort(prev => new Set([...prev, trader.assort.length]))
   }, [trader.assort.length])
 
@@ -1313,6 +1316,7 @@ function BulkEditModal({ open, count, loyaltyLevels, defaultCurrency, onClose, o
   onApply: (values: {
     loyaltyLevel?: number
     price?: number
+    priceMultiplier?: number
     currency?: string | null
     stock?: number
     stackSize?: number | null
@@ -1322,6 +1326,7 @@ function BulkEditModal({ open, count, loyaltyLevels, defaultCurrency, onClose, o
 }) {
   const [loyaltyLevel, setLoyaltyLevel] = useState('')
   const [price, setPrice] = useState('')
+  const [priceMultiplier, setPriceMultiplier] = useState('')
   const [currency, setCurrency] = useState('')
   const [stock, setStock] = useState('')
   const [stackSize, setStackSize] = useState('')
@@ -1333,6 +1338,7 @@ function BulkEditModal({ open, count, loyaltyLevels, defaultCurrency, onClose, o
     if (open) {
       setLoyaltyLevel('')
       setPrice('')
+      setPriceMultiplier('')
       setCurrency('')
       setStock('')
       setStackSize('')
@@ -1369,6 +1375,13 @@ function BulkEditModal({ open, count, loyaltyLevels, defaultCurrency, onClose, o
             <label className="label">Price</label>
             <input type="number" className="input-field text-sm" value={price}
               onChange={e => setPrice(e.target.value)} min={0} placeholder="no change" />
+          </div>
+
+          <div>
+            <label className="label">Price Multiplier (e.g. 1.5)</label>
+            <input type="number" className="input-field text-sm" value={priceMultiplier}
+              onChange={e => setPriceMultiplier(e.target.value)} min={0} step={0.01} placeholder="no change" />
+            <p className="text-xs text-tarkov-text-dim mt-1">Multiplies the current price of each item. Applied before Price override.</p>
           </div>
 
           <div>
@@ -1421,6 +1434,7 @@ function BulkEditModal({ open, count, loyaltyLevels, defaultCurrency, onClose, o
               const values: Parameters<typeof onApply>[0] = {}
               if (loyaltyLevel) values.loyaltyLevel = Number(loyaltyLevel)
               if (price !== '') values.price = Number(price)
+              if (priceMultiplier !== '') values.priceMultiplier = Number(priceMultiplier)
               if (currency) values.currency = currency === '__default__' ? null : currency
               if (stock !== '') values.stock = Number(stock)
               if (clearStackSize) values.stackSize = null
@@ -1534,7 +1548,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
   storyQuests: QuestPackDefinition['storyQuests']
   expanded: Set<number>
   onToggle: (i: number) => void
-  onAdd: () => void
+  onAdd: (loyaltyLevel?: number) => void
   onAddItems: (items: AssortItem[]) => void
   onRemove: (i: number) => void
   onRemoveItems: (indices: number[]) => void
@@ -1627,10 +1641,12 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
 
   const addCategoryToAssort = () => {
     if (addableCategoryItems.length === 0) return
+    const ll = loyaltyFilter !== 'all' ? loyaltyFilter : 1
     const newItems: AssortItem[] = addableCategoryItems.map(e => ({
       ...createDefaultAssortItem(),
       itemTpl: e.id,
       price: e.price!,
+      loyaltyLevel: ll,
     }))
     onAddItems(newItems)
   }
@@ -1649,7 +1665,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
           <button onClick={onImportFromClipboard} className="btn-secondary text-sm flex items-center gap-1.5">
             <ClipboardPaste size={14} /> Import from TraderGen
           </button>
-          <button onClick={onAdd} className="btn-primary text-sm flex items-center gap-1.5">
+          <button onClick={() => onAdd(loyaltyFilter !== 'all' ? loyaltyFilter : undefined)} className="btn-primary text-sm flex items-center gap-1.5">
             <Plus size={14} /> Add Item
           </button>
         </div>
@@ -2111,7 +2127,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
           <button onClick={onImportFromClipboard} className="btn-secondary text-sm flex items-center gap-1.5">
             <ClipboardPaste size={14} /> Import from TraderGen
           </button>
-          <button onClick={onAdd} className="btn-primary text-sm flex items-center gap-1.5">
+          <button onClick={() => onAdd(loyaltyFilter !== 'all' ? loyaltyFilter : undefined)} className="btn-primary text-sm flex items-center gap-1.5">
             <Plus size={14} /> Add Item
           </button>
         </div>
@@ -2126,6 +2142,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
         onApply={values => {
           selected.forEach(index => {
             if (values.loyaltyLevel !== undefined) onUpdate(index, 'loyaltyLevel', values.loyaltyLevel)
+            if (values.priceMultiplier !== undefined) onUpdate(index, 'price', Math.round(assort[index].price * values.priceMultiplier))
             if (values.price !== undefined) onUpdate(index, 'price', values.price)
             if (values.currency !== undefined) onUpdate(index, 'currency', values.currency ?? undefined)
             if (values.stock !== undefined) onUpdate(index, 'stock', values.stock)
