@@ -1577,6 +1577,176 @@ function RaritySortModal({ open, rarities, loyaltyLevels, onClose, onApply }: {
   )
 }
 
+interface StatRule {
+  id: number
+  stat: 'pen' | 'damage' | 'armorDamage' | 'armorClass'
+  min: string
+  max: string
+  loyaltyLevel: string
+}
+
+/* ===== STATS SORT MODAL ===== */
+function StatsSortModal({ open, loyaltyLevels, onClose, onApply }: {
+  open: boolean
+  loyaltyLevels: LoyaltyLevel[]
+  onClose: () => void
+  onApply: (type: 'ammo' | 'armor', rules: { stat: StatRule['stat']; min: number; max: number; loyaltyLevel: number }[]) => void
+}) {
+  const [type, setType] = useState<'ammo' | 'armor'>('ammo')
+  const [rules, setRules] = useState<StatRule[]>([])
+  const nextId = useRef(1)
+
+  useEffect(() => {
+    if (open) {
+      setType('ammo')
+      setRules([])
+    }
+  }, [open])
+
+  if (!open) return null
+
+  const statOptions: { value: StatRule['stat']; label: string }[] = type === 'ammo'
+    ? [
+        { value: 'pen', label: 'Penetration Power' },
+        { value: 'damage', label: 'Damage' },
+        { value: 'armorDamage', label: 'Armor Damage' },
+      ]
+    : [{ value: 'armorClass', label: 'Armor Class' }]
+
+  const addRule = () => {
+    setRules(prev => [...prev, {
+      id: nextId.current++,
+      stat: statOptions[0].value,
+      min: '',
+      max: '',
+      loyaltyLevel: String(loyaltyLevels[0]?.level || 1),
+    }])
+  }
+
+  const updateRule = (id: number, patch: Partial<StatRule>) => {
+    setRules(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r))
+  }
+
+  const removeRule = (id: number) => {
+    setRules(prev => prev.filter(r => r.id !== id))
+  }
+
+  const handleApply = () => {
+    const parsed = rules.map(r => ({
+      stat: r.stat,
+      min: r.min === '' ? -Infinity : Number(r.min),
+      max: r.max === '' ? Infinity : Number(r.max),
+      loyaltyLevel: Number(r.loyaltyLevel),
+    })).filter(r => !isNaN(r.min) && !isNaN(r.max) && !isNaN(r.loyaltyLevel))
+    onApply(type, parsed)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-tarkov-surface border border-tarkov-border rounded-lg w-full max-w-md p-6 space-y-4 shadow-xl">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-tarkov-accent flex items-center gap-2">
+            <Target size={18} /> Sort by Stats
+          </h3>
+          <button onClick={onClose} className="text-tarkov-text-dim hover:text-tarkov-text">
+            <X size={18} />
+          </button>
+        </div>
+
+        <p className="text-sm text-tarkov-text-dim">
+          Set loyalty levels based on item stats. Rules are checked in order and the first matching rule wins.
+        </p>
+
+        <div>
+          <label className="label">Item Type</label>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setType('ammo'); setRules([]) }}
+              className={`flex-1 text-sm px-3 py-2 rounded-lg border transition-colors ${
+                type === 'ammo' ? 'bg-tarkov-accent border-tarkov-accent text-white' : 'bg-tarkov-bg border-tarkov-border text-tarkov-text-dim hover:text-tarkov-text'
+              }`}
+            >
+              Ammo
+            </button>
+            <button
+              onClick={() => { setType('armor'); setRules([]) }}
+              className={`flex-1 text-sm px-3 py-2 rounded-lg border transition-colors ${
+                type === 'armor' ? 'bg-tarkov-accent border-tarkov-accent text-white' : 'bg-tarkov-bg border-tarkov-border text-tarkov-text-dim hover:text-tarkov-text'
+              }`}
+            >
+              Armour
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+          {rules.length === 0 && (
+            <p className="text-sm text-tarkov-text-dim">No rules. Add a rule to sort selected items.</p>
+          )}
+          {rules.map(rule => (
+            <div key={rule.id} className="bg-tarkov-bg border border-tarkov-border rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <select
+                  className="input-field text-sm flex-1"
+                  value={rule.stat}
+                  onChange={e => updateRule(rule.id, { stat: e.target.value as StatRule['stat'] })}
+                >
+                  {statOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => removeRule(rule.id)}
+                  className="text-tarkov-error hover:text-tarkov-error/80 p-1 ml-2"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <input
+                  type="number"
+                  className="input-field text-sm"
+                  placeholder="Min"
+                  value={rule.min}
+                  onChange={e => updateRule(rule.id, { min: e.target.value })}
+                />
+                <input
+                  type="number"
+                  className="input-field text-sm"
+                  placeholder="Max"
+                  value={rule.max}
+                  onChange={e => updateRule(rule.id, { max: e.target.value })}
+                />
+                <select
+                  className="input-field text-sm"
+                  value={rule.loyaltyLevel}
+                  onChange={e => updateRule(rule.id, { loyaltyLevel: e.target.value })}
+                >
+                  {loyaltyLevels.map(ll => (
+                    <option key={ll.level} value={ll.level}>LL {ll.level}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={addRule}
+          className="w-full text-sm btn-secondary flex items-center justify-center gap-1.5"
+        >
+          <Plus size={14} /> Add Rule
+        </button>
+
+        <div className="flex justify-end gap-3 pt-2">
+          <button onClick={onClose} className="btn-secondary text-sm">Cancel</button>
+          <button onClick={handleApply} className="btn-primary text-sm">Apply</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ===== ASSORT TAB ===== */
 function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expanded, onToggle,
   onAdd, onAddItems, onRemove, onRemoveItems, onUpdate, onAddBarter, onRemoveBarter, onUpdateBarter,
@@ -1615,6 +1785,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bulkEditOpen, setBulkEditOpen] = useState(false)
   const [raritySortOpen, setRaritySortOpen] = useState(false)
+  const [statsSortOpen, setStatsSortOpen] = useState(false)
 
   const searchMatchedAssort = assort
     .map((item, index) => ({ item, index }))
@@ -1811,6 +1982,13 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
             className="text-xs btn-secondary flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Star size={12} /> Sort by Rarity{selected.size > 0 && ` (${selected.size})`}
+          </button>
+          <button
+            onClick={() => setStatsSortOpen(true)}
+            disabled={selected.size === 0}
+            className="text-xs btn-secondary flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Target size={12} /> Sort by Stats{selected.size > 0 && ` (${selected.size})`}
           </button>
           <button
             onClick={() => {
@@ -2207,6 +2385,34 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
           })
           setSelected(new Set())
           setRaritySortOpen(false)
+        }}
+      />
+
+      <StatsSortModal
+        open={statsSortOpen}
+        loyaltyLevels={loyaltyLevels}
+        onClose={() => setStatsSortOpen(false)}
+        onApply={(type, rules) => {
+          selected.forEach(index => {
+            const entry = itemDb.get(assort[index].itemTpl)
+            if (!entry) return
+            for (const rule of rules) {
+              let value: number | undefined
+              if (type === 'ammo') {
+                if (rule.stat === 'pen') value = entry.ammoPen
+                else if (rule.stat === 'damage') value = entry.ammoDamage
+                else if (rule.stat === 'armorDamage') value = entry.ammoArmorDamage
+              } else if (type === 'armor' && rule.stat === 'armorClass') {
+                value = entry.armorClass
+              }
+              if (value !== undefined && value >= rule.min && value <= rule.max) {
+                onUpdate(index, 'loyaltyLevel', rule.loyaltyLevel)
+                break
+              }
+            }
+          })
+          setSelected(new Set())
+          setStatsSortOpen(false)
         }}
       />
     </div>

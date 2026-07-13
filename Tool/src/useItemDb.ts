@@ -7,6 +7,10 @@ export interface ItemDbEntry {
   parentId: string | null
   rarity: string | null
   price: number | null
+  ammoDamage?: number
+  ammoArmorDamage?: number
+  ammoPen?: number
+  armorClass?: number
 }
 
 let itemDb: Map<string, ItemDbEntry> | null = null

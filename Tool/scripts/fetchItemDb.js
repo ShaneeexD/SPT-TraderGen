@@ -24,14 +24,25 @@ async function fetchDetails(ids) {
   async function processOne(id) {
     try {
       const detail = await fetchJson(ITEM_URL(id))
+      const props = detail.item?._props || {}
       const parentId = detail.item?._parent
-      const isQuestItem = detail.item?._props?.QuestItem === true
+      const isQuestItem = props.QuestItem === true
+      const slots = Array.isArray(props.Slots) ? props.Slots : []
+      const plateIds = slots.flatMap(s => {
+        const filters = Array.isArray(s._props?.filters) ? s._props.filters : []
+        return filters.map(f => f.Plate).filter(p => p && typeof p === 'string')
+      })
       return {
         id,
         name: detail.locale?.Name || detail.locale?.ShortName || detail.item?._name || '',
         parentId: parentId || null,
-        rarity: detail.item?._props?.RarityPvE || null,
+        rarity: props.RarityPvE || null,
         skipped: isQuestItem,
+        ammoDamage: typeof props.Damage === 'number' ? props.Damage : null,
+        ammoArmorDamage: typeof props.ArmorDamage === 'number' ? props.ArmorDamage : null,
+        ammoPen: typeof props.PenetrationPower === 'number' ? props.PenetrationPower : null,
+        armorClass: typeof props.armorClass === 'string' || typeof props.armorClass === 'number' ? Number(props.armorClass) : null,
+        plateIds,
       }
     } catch (err) {
       console.error(`Failed ${id}: ${err.message}`)
@@ -71,14 +82,39 @@ async function run() {
     const entry = entries[i]
     const detail = details[i]
     if (!detail || detail.skipped) continue
-    out.push({
+    const item = {
       id: entry.id,
       name: entry.name,
       parentId: detail.parentId,
       rarity: detail.rarity,
       price: entry.price,
-    })
-    detailById.set(entry.id, out[out.length - 1])
+    }
+    if (detail.ammoDamage !== null) item.ammoDamage = detail.ammoDamage
+    if (detail.ammoArmorDamage !== null) item.ammoArmorDamage = detail.ammoArmorDamage
+    if (detail.ammoPen !== null) item.ammoPen = detail.ammoPen
+    if (detail.armorClass !== null) item.armorClass = detail.armorClass
+    if (detail.plateIds.length > 0) item.plateIds = detail.plateIds
+    out.push(item)
+    detailById.set(entry.id, item)
+  }
+
+  // For plate carriers with armorClass 0, compute overall class from default plates
+  for (const item of out) {
+    if (item.plateIds && item.plateIds.length > 0 && (item.armorClass === 0 || item.armorClass === null)) {
+      let sum = 0
+      let count = 0
+      for (const plateId of item.plateIds) {
+        const plate = detailById.get(plateId)
+        if (plate && typeof plate.armorClass === 'number' && plate.armorClass > 0) {
+          sum += plate.armorClass
+          count++
+        }
+      }
+      if (count > 0) {
+        item.armorClass = sum / count
+      }
+      delete item.plateIds
+    }
   }
 
   // Fetch missing parent nodes so category ancestry is complete
@@ -91,6 +127,7 @@ async function run() {
     for (const node of nodes) {
       if (!node || node.skipped) continue
       const entry = { id: node.id, name: node.name || node.id, parentId: node.parentId, rarity: null, price: null }
+      if (node.armorClass !== null) entry.armorClass = node.armorClass
       out.push(entry)
       detailById.set(node.id, entry)
       added++
