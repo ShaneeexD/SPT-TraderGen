@@ -3,7 +3,7 @@ import {
   Store, Plus, Trash2, Download, AlertCircle, CheckCircle,
   ChevronDown, ChevronUp, Copy, RefreshCw, Eye, Package,
   Shield, Star, Settings, FileJson, HelpCircle, ExternalLink, Upload, Crosshair,
-  X, Tag, ClipboardPaste, BookOpen, Menu, Target, Map, Wrench,
+  X, Tag, ClipboardPaste, BookOpen, Menu, Target, Map, Wrench, Search,
 } from 'lucide-react'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
@@ -1778,6 +1778,19 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
   const itemNames = useItemNames(allIds)
   const itemDb = useItemDb()
 
+  const itemOptions = useMemo(() => {
+    const opts: SearchableSelectOption[] = []
+    for (const entry of itemDb.values()) {
+      if (!entry.id) continue
+      opts.push({
+        value: entry.id,
+        label: entry.name,
+        sub: `${entry.shortName || ''} — ${entry.id}`,
+      })
+    }
+    return opts.sort((a, b) => a.label.localeCompare(b.label))
+  }, [itemDb])
+
   const [searchQuery, setSearchQuery] = useState('')
   const [otherQuestMode, setOtherQuestMode] = useState<Set<number>>(new Set())
   const [loyaltyFilter, setLoyaltyFilter] = useState<'all' | 1 | 2 | 3 | 4>('all')
@@ -2087,10 +2100,13 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
               {isExpanded && (
                 <div className="mt-4 pt-4 border-t border-tarkov-border space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Field label="Item Template ID" tooltip="The 24-character hex ID of the item from the SPT database. Find IDs at db.sp-tarkov.com/search">
-                      <input className="input-field font-mono text-sm" value={item.itemTpl}
-                        onChange={e => onUpdate(index, 'itemTpl', e.target.value)}
-                        placeholder="24-char hex ID from SPT database" maxLength={24} />
+                    <Field label="Item Template ID" tooltip="Search for the item by name, short name, or ID, or enter the 24-character hex ID from the SPT database.">
+                      <SearchableSelect
+                        value={item.itemTpl}
+                        onChange={v => onUpdate(index, 'itemTpl', v)}
+                        options={itemOptions}
+                        placeholder="Search by name or ID..."
+                      />
                       <p className="text-xs text-tarkov-text-dim mt-1">
                         Find IDs at{' '}
                         <a href="https://db.sp-tarkov.com/search" target="_blank" rel="noopener noreferrer"
@@ -2520,6 +2536,87 @@ function PreviewTab({ trader, questPack, onValidate }: {
 }
 
 /* ===== SHARED COMPONENTS ===== */
+interface SearchableSelectOption {
+  value: string
+  label: string
+  sub: string
+}
+
+function SearchableSelect({ value, onChange, options, placeholder }: {
+  value: string
+  onChange: (value: string) => void
+  options: SearchableSelectOption[]
+  placeholder?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const containerRef = useRef<HTMLDivElement>(null)
+  const selected = options.find(o => o.value === value)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return options.slice(0, 50)
+    return options.filter(o =>
+      o.label.toLowerCase().includes(q) ||
+      o.sub.toLowerCase().includes(q) ||
+      o.value.toLowerCase().includes(q)
+    ).slice(0, 100)
+  }, [options, query])
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-tarkov-text-dim pointer-events-none" />
+        <input
+          className="input-field w-full pl-9 font-mono text-sm"
+          placeholder={placeholder}
+          value={open ? query : selected?.label || value}
+          onFocus={() => {
+            setQuery(selected?.label || '')
+            setOpen(true)
+          }}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setOpen(true)
+          }}
+        />
+      </div>
+      {open && (
+        <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto bg-tarkov-surface border border-tarkov-border rounded shadow-lg">
+          {filtered.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-tarkov-text-dim">No matches</div>
+          ) : (
+            filtered.map((o) => (
+              <button
+                key={o.value}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-tarkov-border/50 text-tarkov-text"
+                onClick={() => {
+                  onChange(o.value)
+                  setQuery(o.label)
+                  setOpen(false)
+                }}
+              >
+                <div className="truncate">{o.label}</div>
+                <div className="text-xs text-tarkov-text-dim font-mono truncate">{o.sub}</div>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Field({ label, error, tooltip, children }: {
   label: string
   error?: boolean
