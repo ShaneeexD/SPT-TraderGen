@@ -1,10 +1,13 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using SPTarkov.Server.Core.Models.Common;
+using SptTables = SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Logging;
 using SPTarkov.Server.Core.Models.Utils;
 using SPTarkov.Server.Core.Services;
 using TraderGen.Models;
 using System.Globalization;
+using System.Linq;
 
 namespace TraderGen.Services;
 
@@ -23,6 +26,7 @@ public static class QuestBuilder
     public static int BuildQuestFiles(
         string traderId,
         List<StoryQuestDefinition> allStoryQuests,
+        List<ProductionSchemeDefinition> productionSchemes,
         string outputBaseDir,
         string packFolder,
         string? defaultQuestIcon,
@@ -61,6 +65,7 @@ public static class QuestBuilder
         var allLocales = new JsonObject();
         var questAssortSuccess = new JsonObject();
         var count = 0;
+        var schemeDict = productionSchemes.ToDictionary(s => s.Id, s => s);
 
         // Location locale entries
         allLocales["any Name"] = "Any location";
@@ -82,7 +87,7 @@ public static class QuestBuilder
         {
             // Resolve quest icon
             var iconFileName = ResolveQuestIcon(quest, packFolder, defaultQuestIcon, imagesDir);
-            var bsgQuest = BuildStoryQuest(quest, allLocales, iconFileName, databaseService);
+            var bsgQuest = BuildStoryQuest(quest, allLocales, iconFileName, databaseService, schemeDict);
             allQuests[quest.Id] = bsgQuest;
             BuildQuestAssortUnlocks(quest.Id, quest.Rewards, questAssortSuccess);
             count++;
@@ -99,26 +104,100 @@ public static class QuestBuilder
             Path.Combine(localesDir, "en.json"),
             allLocales.ToJsonString(jsonOpts));
 
-        var questAssortObj = new JsonObject
-        {
-            ["started"] = new JsonObject(),
-            ["success"] = questAssortSuccess,
-            ["fail"] = new JsonObject(),
-        };
-        File.WriteAllText(
-            Path.Combine(assortDir, "questAssort.json"),
-            questAssortObj.ToJsonString(jsonOpts));
-
         logger.LogWithColor(
             $"[TraderGen] Built {count} quest(s) for trader {traderId} → {traderDir}",
             LogTextColor.Green);
+
+        // Resolve quest-assort keys against the trader's already-built assort and apply to the live database.
+        var trader = databaseService.GetTables().Traders.GetValueOrDefault(traderId);
+        if (trader != null)
+        {
+            if (!trader.QuestAssort.TryGetValue("success", out var successMap))
+            {
+                successMap = new Dictionary<MongoId, MongoId>();
+                trader.QuestAssort["success"] = successMap;
+            }
+
+            var resolved = new JsonObject();
+            foreach (var kvp in questAssortSuccess)
+            {
+                var questId = kvp.Value?.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(questId))
+                    continue;
+
+                var rawId = kvp.Key;
+                var item = trader.Assort.Items.FirstOrDefault(i => i.Id == rawId)
+                    ?? trader.Assort.Items.FirstOrDefault(i => i.Template == rawId);
+
+                string itemId;
+                if (item != null)
+                {
+                    itemId = item.Id;
+                }
+                else
+                {
+                    // Auto-create a placeholder assort item so the quest-locked item actually shows.
+                    itemId = MongoId.IsValidMongoId(rawId) ? rawId : new MongoId().ToString();
+                    var tpl = MongoId.IsValidMongoId(rawId) ? rawId : rawId;
+                    trader.Assort.Items.Add(new SptTables.Item
+                    {
+                        Id = itemId,
+                        Template = tpl,
+                        ParentId = "hideout",
+                        SlotId = "hideout",
+                        Upd = new SptTables.Upd
+                        {
+                            UnlimitedCount = true,
+                            StackObjectsCount = 999999,
+                        },
+                    });
+
+                    // 1 RUB placeholder; user can define a real barter in the trader's assort list if desired.
+                    var rubTpl = "5449016a4bdc2d6f028b456f";
+                    trader.Assort.BarterScheme[itemId] =
+                    [
+                        [new SptTables.BarterScheme { Template = rubTpl, Count = 1 }],
+                    ];
+                    trader.Assort.LoyalLevelItems[itemId] = 1;
+                }
+
+                successMap[new MongoId(itemId)] = new MongoId(questId);
+                resolved[itemId] = questId;
+            }
+
+            File.WriteAllText(
+                Path.Combine(assortDir, "questAssort.json"),
+                new JsonObject
+                {
+                    ["started"] = new JsonObject(),
+                    ["success"] = resolved,
+                    ["fail"] = new JsonObject(),
+                }.ToJsonString(jsonOpts));
+        }
+        else
+        {
+            var questAssortObj = new JsonObject
+            {
+                ["started"] = new JsonObject(),
+                ["success"] = questAssortSuccess,
+                ["fail"] = new JsonObject(),
+            };
+            File.WriteAllText(
+                Path.Combine(assortDir, "questAssort.json"),
+                questAssortObj.ToJsonString(jsonOpts));
+        }
 
         return count;
     }
 
     // ==================== Story Quest Builder ====================
 
-    private static JsonObject BuildStoryQuest(StoryQuestDefinition quest, JsonObject locales, string iconFileName, DatabaseService databaseService)
+    private static JsonObject BuildStoryQuest(
+        StoryQuestDefinition quest,
+        JsonObject locales,
+        string iconFileName,
+        DatabaseService databaseService,
+        Dictionary<string, ProductionSchemeDefinition> schemes)
     {
         var questId = quest.Id;
 
@@ -174,7 +253,7 @@ public static class QuestBuilder
         }
 
         // Build rewards
-        var successRewards = BuildRewards(quest.Rewards, quest.TraderId);
+        var successRewards = BuildRewards(quest.Rewards, quest.TraderId, schemes);
 
         // Determine quest type based on objectives
         var questType = DetermineQuestType(quest.Objectives);
@@ -822,7 +901,7 @@ public static class QuestBuilder
 
     // Reward builder
 
-    private static JsonArray BuildRewards(QuestRewards rewards, string traderId)
+    private static JsonArray BuildRewards(QuestRewards rewards, string traderId, Dictionary<string, ProductionSchemeDefinition> schemes)
     {
         var result = new JsonArray();
         var idx = 0;
@@ -926,23 +1005,59 @@ public static class QuestBuilder
         // Assortment unlock rewards
         foreach (var assortItemId in rewards.UnlockAssortItems)
         {
+            var targetItemId = GenerateId();
             result.Add(new JsonObject
             {
                 ["availableInGameEditions"] = new JsonArray(),
+                ["gameMode"] = new JsonArray { "regular", "pve" },
                 ["id"] = GenerateId(),
                 ["index"] = idx++,
+                ["isHidden"] = false,
                 ["items"] = new JsonArray
                 {
                     new JsonObject
                     {
-                        ["_id"] = assortItemId,
-                        ["_tpl"] = assortItemId, // The assort item ID is also the tpl reference
+                        ["_id"] = targetItemId,
+                        ["_tpl"] = assortItemId,
                     },
                 },
                 ["loyaltyLevel"] = 1,
-                ["target"] = assortItemId,
+                ["target"] = targetItemId,
                 ["traderId"] = traderId,
                 ["type"] = "AssortmentUnlock",
+                ["unknown"] = false,
+            });
+        }
+
+        // Recipe unlock rewards
+        foreach (var recipe in rewards.Recipes)
+        {
+            if (string.IsNullOrWhiteSpace(recipe)) continue;
+            var targetItemId = GenerateId();
+            var scheme = schemes.GetValueOrDefault(recipe);
+            var recipeItems = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["_id"] = targetItemId,
+                    ["_tpl"] = scheme?.EndProduct ?? recipe,
+                    ["upd"] = new JsonObject
+                    {
+                        ["StackObjectsCount"] = scheme?.Count ?? 1,
+                    },
+                },
+            };
+            result.Add(new JsonObject
+            {
+                ["availableInGameEditions"] = new JsonArray(),
+                ["gameMode"] = new JsonArray { "regular", "pve" },
+                ["id"] = GenerateId(),
+                ["index"] = idx++,
+                ["items"] = recipeItems,
+                ["loyaltyLevel"] = 1,
+                ["target"] = targetItemId,
+                ["traderId"] = scheme?.AreaType ?? 0,
+                ["type"] = "ProductionScheme",
                 ["unknown"] = false,
             });
         }

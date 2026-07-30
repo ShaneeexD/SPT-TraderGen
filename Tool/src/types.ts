@@ -87,6 +87,32 @@ export interface QuestPackDefinition {
   storyQuests: StoryQuestDefinition[]
   rotatingQuests: RotatingQuestTemplate[]
   zones: QuestZone[]
+  productionSchemes: ProductionSchemeDefinition[]
+}
+
+export interface ProductionSchemeDefinition {
+  _id: string
+  areaType: number
+  endProduct: string
+  count: number
+  productionTime: number
+  needFuelForAllProductionTime?: boolean
+  unlockedByDefault?: boolean
+  continuous?: boolean
+  productionLimitCount?: number
+  requirements: SchemeRequirement[]
+}
+
+export interface SchemeRequirement {
+  type: 'Item' | 'Tool' | 'Area' | 'Resource'
+  templateId?: string
+  count?: number
+  areaType?: number
+  requiredLevel?: number
+  resource?: number
+  isEncoded?: boolean
+  isFunctional?: boolean
+  isSpawnedInSession?: boolean
 }
 
 export interface StoryQuestDefinition {
@@ -142,6 +168,7 @@ export interface QuestRewards {
   traderStanding: number
   items?: RewardItem[]
   unlockAssortItems?: string[]
+  recipes?: string[]
   stashRows?: number
   skills?: SkillReward[]
   pockets?: string
@@ -433,6 +460,7 @@ export function createDefaultQuestPack(): QuestPackDefinition {
     storyQuests: [],
     rotatingQuests: [],
     zones: [],
+    productionSchemes: [],
   }
 }
 

@@ -17,6 +17,7 @@ import {
 } from './types'
 import { validateTrader, buildExportJson, validateQuestPack, buildQuestExportJson } from './validation'
 import QuestsTab from './QuestsTab'
+import SchemesTab from './SchemesTab'
 import { useItemNames } from './useItemNames'
 import { useItemDb, type ItemDbEntry, isItemInCategory } from './useItemDb'
 import { getVanillaTraderList, loadVanillaTraderById, loadVanillaQuestPackByTraderId } from './vanillaLoader'
@@ -96,7 +97,7 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   )
 }
 
-type Tab = 'general' | 'loyalty' | 'assort' | 'quests' | 'preview'
+type Tab = 'general' | 'loyalty' | 'assort' | 'quests' | 'schemes' | 'preview'
 
 export default function App() {
   const [trader, setTrader] = useState<TraderDefinition>(createDefaultTrader)
@@ -173,7 +174,7 @@ export default function App() {
     }
 
     // Quest pack (only if quests exist)
-    const questJson = buildQuestExportJson(questPack)
+    const questJson = buildQuestExportJson(questPack, trader)
     if (questJson) {
       zip.file(`${basePath}/quests.json`, JSON.stringify(questJson, null, 2))
     }
@@ -612,11 +613,36 @@ export default function App() {
   }, [])
 
   const updateAssortItem = useCallback((index: number, key: keyof AssortItem, value: unknown) => {
+    const newAssort = trader.assort.map((item, i) => i === index ? { ...item, [key]: value } : item)
+
     setTrader(prev => ({
       ...prev,
-      assort: prev.assort.map((item, i) => i === index ? { ...item, [key]: value } : item),
+      assort: newAssort,
     }))
-  }, [])
+
+    // Keep quest unlockAssortItems in sync with assort lockedByQuest settings.
+    if (key === 'lockedByQuest' || key === 'itemTpl') {
+      setQuestPack(prev => ({
+        ...prev,
+        storyQuests: prev.storyQuests.map(q => {
+          if (q.traderId !== trader.id) return q
+          const unlocked = newAssort
+            .filter(item => item.lockedByQuest === q.id)
+            .map(item => item.itemTpl)
+          if (JSON.stringify(q.rewards.unlockAssortItems) === JSON.stringify(unlocked.length ? unlocked : undefined)) {
+            return q
+          }
+          return {
+            ...q,
+            rewards: {
+              ...q.rewards,
+              unlockAssortItems: unlocked.length ? unlocked : undefined,
+            },
+          }
+        }),
+      }))
+    }
+  }, [trader.assort, trader.id])
 
   const toggleAssort = useCallback((index: number) => {
     setExpandedAssort(prev => {
@@ -773,6 +799,7 @@ export default function App() {
     { id: 'loyalty', label: 'Loyalty Levels', icon: <Star size={16} /> },
     { id: 'assort', label: 'Assortment', icon: <Package size={16} /> },
     { id: 'quests', label: 'Quests', icon: <Crosshair size={16} /> },
+    { id: 'schemes', label: 'Schemes', icon: <Wrench size={16} /> },
     { id: 'preview', label: 'JSON Preview', icon: <FileJson size={16} /> },
   ]
 
@@ -908,6 +935,11 @@ export default function App() {
                 {questPack.storyQuests.length + questPack.rotatingQuests.length}
               </span>
             )}
+            {tab.id === 'schemes' && questPack.productionSchemes.length > 0 && (
+              <span className="ml-1 bg-tarkov-accent/20 text-tarkov-accent text-xs px-1.5 py-0.5 rounded-full">
+                {questPack.productionSchemes.length}
+              </span>
+            )}
           </button>
         ))}
       </nav>
@@ -933,6 +965,12 @@ export default function App() {
             onChange={pack => { setQuestPack(pack); setQuestErrors([]) }}
             onImportFromClipboard={importRewardFromClipboard}
             errors={questErrors}
+          />
+        )}
+        {activeTab === 'schemes' && (
+          <SchemesTab
+            schemes={questPack.productionSchemes}
+            onChange={schemes => { setQuestPack(prev => ({ ...prev, productionSchemes: schemes })); setQuestErrors([]) }}
           />
         )}
         {activeTab === 'assort' && (
@@ -2446,7 +2484,7 @@ function PreviewTab({ trader, questPack, onValidate }: {
   const [previewFile, setPreviewFile] = useState<'trader' | 'quests' | 'items'>('trader')
 
   const traderJson = JSON.stringify(buildExportJson(trader), null, 2)
-  const questJson = buildQuestExportJson(questPack)
+  const questJson = buildQuestExportJson(questPack, trader)
   const questJsonStr = questJson ? JSON.stringify(questJson, null, 2) : null
   const itemsJson = JSON.stringify(trader.assort, null, 2)
 
@@ -2551,6 +2589,7 @@ function SearchableSelect({ value, onChange, options, placeholder }: {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
+  const dropdownMouseDown = useRef(false)
   const selected = options.find(o => o.value === value)
 
   useEffect(() => {
@@ -2573,6 +2612,28 @@ function SearchableSelect({ value, onChange, options, placeholder }: {
     ).slice(0, 100)
   }, [options, query])
 
+  const customId = query.trim()
+  const showCustomOption = customId.length === 24 && !options.some(o => o.value.toLowerCase() === customId.toLowerCase())
+  const allOptions = showCustomOption ? [...filtered, { value: customId, label: 'Use custom ID', sub: customId }] : filtered
+
+  const commitCustom = (id: string) => {
+    onChange(id)
+    setQuery(id)
+    setOpen(false)
+  }
+
+  const handleBlur = () => {
+    if (dropdownMouseDown.current) {
+      dropdownMouseDown.current = false
+      return
+    }
+    if (customId.length === 24 && customId.toLowerCase() !== value.toLowerCase()) {
+      commitCustom(customId)
+    } else {
+      setOpen(false)
+    }
+  }
+
   return (
     <div ref={containerRef} className="relative">
       <div className="relative">
@@ -2582,28 +2643,37 @@ function SearchableSelect({ value, onChange, options, placeholder }: {
           placeholder={placeholder}
           value={open ? query : selected?.label || value}
           onFocus={() => {
-            setQuery(selected?.label || '')
+            setQuery(selected?.label || value)
             setOpen(true)
           }}
           onChange={(e) => {
             setQuery(e.target.value)
             setOpen(true)
           }}
+          onBlur={handleBlur}
         />
       </div>
       {open && (
-        <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto bg-tarkov-surface border border-tarkov-border rounded shadow-lg">
-          {filtered.length === 0 ? (
+        <div
+          className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto bg-tarkov-surface border border-tarkov-border rounded shadow-lg"
+          onMouseDown={() => { dropdownMouseDown.current = true }}
+          onMouseUp={() => { dropdownMouseDown.current = false }}
+        >
+          {allOptions.length === 0 ? (
             <div className="px-3 py-2 text-sm text-tarkov-text-dim">No matches</div>
           ) : (
-            filtered.map((o) => (
+            allOptions.map((o) => (
               <button
-                key={o.value}
+                key={o.value + (o.label === 'Use custom ID' ? '-custom' : '')}
                 className="w-full text-left px-3 py-2 text-sm hover:bg-tarkov-border/50 text-tarkov-text"
                 onClick={() => {
-                  onChange(o.value)
-                  setQuery(o.label)
-                  setOpen(false)
+                  if (o.label === 'Use custom ID') {
+                    commitCustom(o.value)
+                  } else {
+                    onChange(o.value)
+                    setQuery(o.label)
+                    setOpen(false)
+                  }
                 }}
               >
                 <div className="truncate">{o.label}</div>

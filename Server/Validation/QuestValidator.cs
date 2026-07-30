@@ -345,6 +345,20 @@ public static class QuestValidator
 
         if (!string.IsNullOrWhiteSpace(rewards.Pockets) && (rewards.Pockets.Length != 24 || !IsHexString(rewards.Pockets)))
             errors.Add($"{prefix}: 'pockets' must be a 24-character hex string. Got: '{rewards.Pockets}'");
+
+        for (var i = 0; i < rewards.UnlockAssortItems.Count; i++)
+        {
+            var id = rewards.UnlockAssortItems[i];
+            if (string.IsNullOrWhiteSpace(id) || id.Length != 24 || !IsHexString(id))
+                errors.Add($"{prefix}.unlockAssortItems[{i}]: must be a 24-character hex string. Got: '{id}'");
+        }
+
+        for (var i = 0; i < rewards.Recipes.Count; i++)
+        {
+            var id = rewards.Recipes[i];
+            if (string.IsNullOrWhiteSpace(id) || id.Length != 24 || !IsHexString(id))
+                errors.Add($"{prefix}.recipes[{i}]: must be a 24-character hex string. Got: '{id}'");
+        }
     }
 
     private static void ValidateRotatingTemplate(

@@ -344,6 +344,64 @@ export function validateQuestPack(pack: QuestPackDefinition, traderId: string): 
         }
       }
     }
+
+    if (q.rewards.unlockAssortItems) {
+      for (let ui = 0; ui < q.rewards.unlockAssortItems.length; ui++) {
+        if (!HEX_24.test(q.rewards.unlockAssortItems[ui])) {
+          errors.push({ field: `quest.${i}.rewards.unlockAssortItems[${ui}]`, message: `${prefix}: unlockAssortItems[${ui}] must be a 24-char hex item ID.` })
+        }
+      }
+    }
+
+    if (q.rewards.recipes) {
+      for (let ri = 0; ri < q.rewards.recipes.length; ri++) {
+        if (!HEX_24.test(q.rewards.recipes[ri])) {
+          errors.push({ field: `quest.${i}.rewards.recipes[${ri}]`, message: `${prefix}: recipes[${ri}] must be a 24-char hex production scheme ID.` })
+        }
+      }
+    }
+  }
+
+  for (let i = 0; i < (pack.productionSchemes || []).length; i++) {
+    const s = pack.productionSchemes![i]
+    const prefix = `Scheme[${i}]`
+    if (!s._id || !HEX_24.test(s._id)) {
+      errors.push({ field: `scheme.${i}._id`, message: `${prefix}: _id must be a 24-char hex string.` })
+    }
+    if (s.areaType < 0 || !Number.isInteger(s.areaType)) {
+      errors.push({ field: `scheme.${i}.areaType`, message: `${prefix}: areaType must be a non-negative integer.` })
+    }
+    if (!s.endProduct || !HEX_24.test(s.endProduct)) {
+      errors.push({ field: `scheme.${i}.endProduct`, message: `${prefix}: endProduct must be a 24-char hex item TPL.` })
+    }
+    if (s.count < 1) {
+      errors.push({ field: `scheme.${i}.count`, message: `${prefix}: count must be >= 1.` })
+    }
+    if (s.productionTime < 0) {
+      errors.push({ field: `scheme.${i}.productionTime`, message: `${prefix}: productionTime cannot be negative.` })
+    }
+    if (s.productionLimitCount !== undefined && s.productionLimitCount < 0) {
+      errors.push({ field: `scheme.${i}.productionLimitCount`, message: `${prefix}: productionLimitCount cannot be negative.` })
+    }
+    const validReqTypes = ['Item', 'Tool', 'Area', 'Resource']
+    for (let ri = 0; ri < (s.requirements || []).length; ri++) {
+      const r = s.requirements![ri]
+      if (!validReqTypes.includes(r.type)) {
+        errors.push({ field: `scheme.${i}.requirements[${ri}].type`, message: `${prefix}: requirement[${ri}] type must be Item, Tool, Area or Resource.` })
+      }
+      if ((r.type === 'Item' || r.type === 'Tool' || r.type === 'Resource') && (!r.templateId || !HEX_24.test(r.templateId))) {
+        errors.push({ field: `scheme.${i}.requirements[${ri}].templateId`, message: `${prefix}: requirement[${ri}] templateId must be a 24-char hex item TPL.` })
+      }
+      if ((r.type === 'Item' || r.type === 'Tool') && (r.count === undefined || r.count < 0)) {
+        errors.push({ field: `scheme.${i}.requirements[${ri}].count`, message: `${prefix}: requirement[${ri}] count must be >= 0.` })
+      }
+      if (r.type === 'Area' && (r.areaType === undefined || r.requiredLevel === undefined)) {
+        errors.push({ field: `scheme.${i}.requirements[${ri}]`, message: `${prefix}: requirement[${ri}] areaType and requiredLevel are required for Area.` })
+      }
+      if (r.type === 'Resource' && (r.resource === undefined || r.resource < 0)) {
+        errors.push({ field: `scheme.${i}.requirements[${ri}].resource`, message: `${prefix}: requirement[${ri}] resource amount must be >= 0.` })
+      }
+    }
   }
 
   for (let i = 0; i < pack.rotatingQuests.length; i++) {
@@ -389,7 +447,7 @@ export function validateQuestPack(pack: QuestPackDefinition, traderId: string): 
   return errors
 }
 
-export function buildQuestExportJson(pack: QuestPackDefinition): object | null {
+export function buildQuestExportJson(pack: QuestPackDefinition, trader?: TraderDefinition): object | null {
   const hasQuests = pack.storyQuests.length > 0 || pack.rotatingQuests.length > 0
   if (!hasQuests) return null
 
@@ -399,8 +457,28 @@ export function buildQuestExportJson(pack: QuestPackDefinition): object | null {
     output.defaultQuestIcon = pack.defaultQuestIcon
   }
 
+  const lockedByQuest = new Map<string, string[]>()
+  if (trader?.assort) {
+    for (const item of trader.assort) {
+      if (item.lockedByQuest && HEX_24.test(item.lockedByQuest)) {
+        const list = lockedByQuest.get(item.lockedByQuest) || []
+        if (HEX_24.test(item.itemTpl) && !list.includes(item.itemTpl)) {
+          list.push(item.itemTpl)
+        }
+        lockedByQuest.set(item.lockedByQuest, list)
+      }
+    }
+  }
+
   if (pack.storyQuests.length > 0) {
     output.storyQuests = pack.storyQuests.map(q => {
+      const questUnlocks = lockedByQuest.get(q.id) || []
+      const rewards: typeof q.rewards = { ...q.rewards }
+      if (questUnlocks.length > 0) {
+        const existing = new Set(rewards.unlockAssortItems || [])
+        for (const tpl of questUnlocks) existing.add(tpl)
+        rewards.unlockAssortItems = Array.from(existing)
+      }
       const quest: Record<string, unknown> = {
         id: q.id,
         traderId: q.traderId,
@@ -438,7 +516,7 @@ export function buildQuestExportJson(pack: QuestPackDefinition): object | null {
           if (obj.plantItemTpl) o.plantItemTpl = obj.plantItemTpl
           return o
         }),
-        rewards: buildRewardsJson(q.rewards),
+        rewards: buildRewardsJson(rewards),
       }
       if (q.image) quest.image = q.image
       return quest
@@ -449,6 +527,10 @@ export function buildQuestExportJson(pack: QuestPackDefinition): object | null {
 
   if (pack.zones && pack.zones.length > 0) {
     output.zones = pack.zones
+  }
+
+  if (pack.productionSchemes && pack.productionSchemes.length > 0) {
+    output.productionSchemes = pack.productionSchemes
   }
 
   if (pack.rotatingQuests.length > 0) {
@@ -497,6 +579,9 @@ function buildRewardsJson(rewards: QuestPackDefinition['storyQuests'][0]['reward
   }
   if (rewards.unlockAssortItems && rewards.unlockAssortItems.length > 0) {
     r.unlockAssortItems = rewards.unlockAssortItems
+  }
+  if (rewards.recipes && rewards.recipes.length > 0) {
+    r.recipes = rewards.recipes
   }
   if (rewards.stashRows && rewards.stashRows > 0) r.stashRows = rewards.stashRows
   if (rewards.skills && rewards.skills.length > 0) r.skills = rewards.skills

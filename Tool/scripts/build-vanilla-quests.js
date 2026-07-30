@@ -175,6 +175,7 @@ function convertRewards(rewards) {
   let money = undefined
   const items = []
   const unlockAssortItems = []
+  const recipes = []
   const skills = []
   let pockets = undefined
   let stashRows = 0
@@ -202,6 +203,9 @@ function convertRewards(rewards) {
           if (item._tpl) unlockAssortItems.push(item._tpl)
         }
         break
+      case 'ProductionScheme':
+        if (r.target) recipes.push(r.target)
+        break
       case 'Skill':
         skills.push({ name: r.target || '', points: r.value || 0 })
         break
@@ -218,6 +222,7 @@ function convertRewards(rewards) {
   if (money) result.money = money
   if (items.length > 0) result.items = items
   if (unlockAssortItems.length > 0) result.unlockAssortItems = unlockAssortItems
+  if (recipes.length > 0) result.recipes = recipes
   if (skills.length > 0) result.skills = skills
   if (pockets) result.pockets = pockets
   if (stashRows > 0) result.stashRows = stashRows

@@ -22,6 +22,80 @@ public class QuestPackDefinition
     // Custom quest zones defined for this pack. Registered via WTT-CommonLib on startup.
     [JsonPropertyName("zones")]
     public List<QuestZoneDefinition> Zones { get; set; } = [];
+
+    // Custom hideout production schemes added to the SPT database.
+    [JsonPropertyName("productionSchemes")]
+    public List<ProductionSchemeDefinition> ProductionSchemes { get; set; } = [];
+}
+
+public class ProductionSchemeDefinition
+{
+    [JsonPropertyName("_id")]
+    public string Id { get; set; } = string.Empty;
+
+    // Hideout area index (e.g. 2 = Lavatory, 7 = Nutrition).
+    [JsonPropertyName("areaType")]
+    public int AreaType { get; set; }
+
+    // Item template produced by this scheme.
+    [JsonPropertyName("endProduct")]
+    public string EndProduct { get; set; } = string.Empty;
+
+    // Number of end products created per craft.
+    [JsonPropertyName("count")]
+    public int Count { get; set; } = 1;
+
+    // Craft duration in seconds.
+    [JsonPropertyName("productionTime")]
+    public double ProductionTime { get; set; }
+
+    [JsonPropertyName("needFuelForAllProductionTime")]
+    public bool NeedFuelForAllProductionTime { get; set; }
+
+    // If false, the scheme is locked by default and unlocked by quests that reward it.
+    [JsonPropertyName("unlockedByDefault")]
+    public bool UnlockedByDefault { get; set; }
+
+    // If true, the craft runs continuously (e.g. water/fuel).
+    [JsonPropertyName("continuous")]
+    public bool Continuous { get; set; }
+
+    // Maximum number of crafts that can be queued, 0 for unlimited.
+    [JsonPropertyName("productionLimitCount")]
+    public int ProductionLimitCount { get; set; }
+
+    [JsonPropertyName("requirements")]
+    public List<SchemeRequirement> Requirements { get; set; } = [];
+}
+
+public class SchemeRequirement
+{
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "Item";
+
+    [JsonPropertyName("templateId")]
+    public string? TemplateId { get; set; }
+
+    [JsonPropertyName("count")]
+    public int? Count { get; set; }
+
+    [JsonPropertyName("areaType")]
+    public int? AreaType { get; set; }
+
+    [JsonPropertyName("requiredLevel")]
+    public int? RequiredLevel { get; set; }
+
+    [JsonPropertyName("resource")]
+    public int? Resource { get; set; }
+
+    [JsonPropertyName("isEncoded")]
+    public bool? IsEncoded { get; set; }
+
+    [JsonPropertyName("isFunctional")]
+    public bool? IsFunctional { get; set; }
+
+    [JsonPropertyName("isSpawnedInSession")]
+    public bool? IsSpawnedInSession { get; set; }
 }
 
 // A single story quest with fixed objectives and rewards.
@@ -217,6 +291,10 @@ public class QuestRewards
     // Each entry is an assort item ID from the trader's assort list.
     [JsonPropertyName("unlockAssortItems")]
     public List<string> UnlockAssortItems { get; set; } = [];
+
+    // Crafting recipe (production scheme) IDs unlocked on completion.
+    [JsonPropertyName("recipes")]
+    public List<string> Recipes { get; set; } = [];
 
     // Number of stash rows to add on completion. Requires client restart.
     [JsonPropertyName("stashRows")]

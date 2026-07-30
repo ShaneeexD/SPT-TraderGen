@@ -163,7 +163,7 @@ public class TraderGenPlugin(
             if (storyQuests.Count > 0)
             {
                 var count = QuestBuilder.BuildQuestFiles(
-                    questPack.TraderId, storyQuests, questOutputDir,
+                    questPack.TraderId, storyQuests, questPack.Definition.ProductionSchemes, questOutputDir,
                     questPack.PackFolder, questPack.Definition.DefaultQuestIcon, databaseService, logger);
                 if (count > 0)
                     totalStoryQuests += count;
@@ -171,6 +171,9 @@ public class TraderGenPlugin(
                     questPacksFailed++;
             }
         }
+
+        // Inject custom production schemes into SPT's hideout database
+        ProductionSchemeInjector.InjectSchemes(questPacks, databaseService, logger);
 
         // Register custom zones from all quest packs
         await RegisterQuestZones(questPacks, modPath);

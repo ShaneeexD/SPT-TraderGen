@@ -478,9 +478,10 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, onImportFrom
   const itemTpls = useMemo(
     () => [
       ...quest.objectives.map(o => o.itemTpl).filter(Boolean),
-      ...(quest.rewards.items || []).map(i => i.itemTpl).filter(Boolean)
+      ...(quest.rewards.items || []).map(i => i.itemTpl).filter(Boolean),
+      ...(quest.rewards.unlockAssortItems || [])
     ] as string[],
-    [quest.objectives.map(o => o.itemTpl).join(','), quest.rewards.items?.map(i => i.itemTpl).join(',')]
+    [quest.objectives.map(o => o.itemTpl).join(','), quest.rewards.items?.map(i => i.itemTpl).join(','), quest.rewards.unlockAssortItems?.join(',')]
   )
   const itemNames = useItemNames(itemTpls)
 
@@ -859,6 +860,74 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, onImportFrom
               ))}
             </div>
           )}
+
+          {/* Recipe Unlocks */}
+          <div className="pt-2 border-t border-tarkov-border/30">
+            <div className="flex items-center gap-3 flex-wrap mb-2">
+              <button
+                onClick={() => {
+                  const newRecipes = [...(quest.rewards.recipes || []), '']
+                  updateRewards({ recipes: newRecipes })
+                }}
+                className="btn-secondary text-xs flex items-center gap-1 px-2 py-1"
+              >
+                <Plus size={12} /> Add Recipe Unlock
+              </button>
+              <span className="text-xs text-tarkov-text-dim">Unlocked crafting production scheme IDs</span>
+            </div>
+            {(quest.rewards.recipes || []).length > 0 && (
+              <div className="space-y-1">
+                {(quest.rewards.recipes || []).map((recipe, idx) => (
+                  <div key={idx} className="flex items-center gap-2 bg-tarkov-bg rounded p-1.5 border border-tarkov-border/50">
+                    <input
+                      type="text"
+                      className="input-field text-xs font-mono w-full"
+                      value={recipe}
+                      onChange={e => {
+                        const newRecipes = [...(quest.rewards.recipes || [])]
+                        newRecipes[idx] = e.target.value
+                        updateRewards({ recipes: newRecipes })
+                      }}
+                      placeholder="24-char production scheme ID"
+                      maxLength={24}
+                    />
+                    <button
+                      onClick={() => {
+                        const newRecipes = (quest.rewards.recipes || []).filter((_, i) => i !== idx)
+                        updateRewards({ recipes: newRecipes.length ? newRecipes : undefined })
+                      }}
+                      className="text-tarkov-error hover:text-tarkov-error/80 p-1"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Assortment Unlocks */}
+          <div className="pt-2 border-t border-tarkov-border/30">
+            <div className="flex items-center gap-2 mb-2">
+              <Package size={14} className="text-tarkov-accent" />
+              <span className="text-xs font-medium text-tarkov-text">Assortment Unlocks</span>
+              <span className="text-xs text-tarkov-text-dim">Auto-synced from items locked by this quest in the Assort tab</span>
+            </div>
+            {(quest.rewards.unlockAssortItems || []).length > 0 ? (
+              <div className="space-y-1">
+                {(quest.rewards.unlockAssortItems || []).map((tpl, idx) => (
+                  <div key={idx} className="flex items-center gap-2 bg-tarkov-bg rounded p-1.5 border border-tarkov-border/50">
+                    <span className="text-xs font-mono text-tarkov-text-dim truncate flex-1" title={tpl}>{tpl}</span>
+                    {itemNames.get(tpl) && (
+                      <span className="text-xs text-tarkov-accent truncate max-w-[200px]">{itemNames.get(tpl)}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-tarkov-text-dim">No items are currently locked behind this quest.</p>
+            )}
+          </div>
 
           {/* Stash Rows */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-tarkov-border/30">

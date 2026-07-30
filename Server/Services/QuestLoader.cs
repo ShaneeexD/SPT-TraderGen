@@ -68,10 +68,10 @@ public static class QuestLoader
             }
 
             var totalQuests = questPack.StoryQuests.Count + questPack.RotatingQuests.Count;
-            if (totalQuests == 0)
+            if (totalQuests == 0 && questPack.ProductionSchemes.Count == 0 && questPack.Zones.Count == 0)
             {
                 logger.LogWithColor(
-                    $"[TraderGen] Quest file '{packName}/{fileName}' has no quests defined. Skipping.",
+                    $"[TraderGen] Quest file '{packName}/{fileName}' has no quests, schemes, or zones. Skipping.",
                     LogTextColor.Yellow);
                 return null;
             }
