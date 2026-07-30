@@ -8,7 +8,8 @@
     "dev": "vite",
     "build-vanilla": "node scripts/build-vanilla.js",
     "build-vanilla-quests": "node scripts/build-vanilla-quests.js",
-    "build": "npm run build-vanilla && npm run build-vanilla-quests && vite build",
+    "build-extracts": "node scripts/build-extracts.js",
+    "build": "npm run build-vanilla && npm run build-vanilla-quests && npm run build-extracts && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

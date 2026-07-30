@@ -15,6 +15,7 @@ import {
   createDefaultRotatingObjective, generateMongoId, createDefaultAssortChild,
   MAP_LOCATIONS, OBJECTIVE_TYPES, ZONE_TYPES, ENEMY_TARGETS, ROTATION_TYPES, QuestZone,
 } from './types'
+import { EXTRACTS_BY_LOCATION } from './extracts'
 import { ChildItemTree } from './ChildItemTree'
 
 // Immutably update a nested child tree inside a RewardItem.
@@ -38,22 +39,8 @@ function produceRewardChildUpdate(
   return { ...item, children: newChildren }
 }
 
-// Extract names by map location (from SPT database allExtracts.json files).
+// Extract names are auto-generated from SPT allExtracts.json into src/extracts.ts.
 // Shown in the Required Extract dropdown for survive/extract objectives.
-const EXTRACTS_BY_LOCATION: Record<string, string[]> = {
-  bigmap: ['ZB-1011', 'Crossroads', 'Old Gas Station', 'Trailer Park', 'RUAF Roadblock', 'Dorms V-Ex', 'EXFIL_ZB013', 'customs_sniper_exit', 'Custom_scav_pmc'],
-  factory4: ['Cellars', 'Gate 3', 'Gate 0', 'Gate m', 'Gate_o'],
-  factory4_day: ['Cellars', 'Gate 3', 'Gate 0', 'Gate m', 'Gate_o'],
-  factory4_night: ['Cellars', 'Gate 3', 'Gate 0', 'Gate m', 'Gate_o'],
-  Woods: ['RUAF Gate', 'ZB-016', 'ZB-014', 'UN Roadblock', 'South V-Ex', 'Outskirts', 'un-sec', 'wood_sniper_exit', 'Factory Gate'],
-  Shoreline: ['Road to Customs', 'Shorl_V-Ex', 'Road_at_railbridge', 'Tunnel', 'Lighthouse_pass', 'Smugglers_Trail_coop', 'Pier Boat', 'Rock Passage'],
-  Interchange: ['SE Exfil', 'NW Exfil', 'PP Exfil', 'Hole Exfill', 'Saferoom Exfil', 'Interchange Cooperation'],
-  Reserve: ['EXFIL_Train', 'EXFIL_Bunker_D2', 'EXFIL_Bunker', 'Alpinist', 'EXFIL_ScavCooperation', 'EXFIL_vent', 'Exit1', 'Exit2', 'Exit3', 'Exit4'],
-  Lighthouse: ['EXFIL_Train', ' V-Ex_light'],
-  laboratory: ['lab_Elevator_Cargo', 'lab_Elevator_Main', 'lab_Vent', 'lab_Elevator_Med', 'lab_Under_Storage_Collector', 'lab_Parking_Gate', 'lab_Hangar_Gate'],
-  TarkovStreets: ['E8_yard', 'E7_car', 'E9_sgr', 'E5_5'],
-  Sandbox: ['Sandbox_VExit', 'Unity_free_exit', 'Scav_coop_exit', 'Nakatani_stairs_free_exit', 'Sniper_exit'],
-}
 
 // Known pocket template IDs for pocket upgrade reward.
 const KNOWN_POCKETS: { id: string; label: string }[] = [
