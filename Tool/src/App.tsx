@@ -820,7 +820,7 @@ export default function App() {
           <Store className="text-tarkov-accent" size={28} />
           <div>
             <h1 className="text-xl font-bold text-tarkov-accent">TraderGen Tool</h1>
-            <p className="text-xs text-tarkov-text-dim">SPTarkov 4.0.13 Trader Pack Editor</p>
+            <p className="text-xs text-tarkov-text-dim">SPTarkov 4.1.0 Trader Pack Editor</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

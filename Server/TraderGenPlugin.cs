@@ -1,12 +1,17 @@
+global using LogColor = Spectre.Console.Color;
 using System.Reflection;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Common.Models.Logging;
+using SPTarkov.Server.Core.Helpers.Server;
+using SPTarkov.Server.Core.Helpers.Profile;
+using SPTarkov.Server.Core.Helpers.Traders;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Enums;
-using SPTarkov.Server.Core.Models.Logging;
+using SPTarkov.Server.Core.Models.Spt.Config;
 using SPTarkov.Server.Core.Models.Spt.Mod;
-using SPTarkov.Server.Core.Models.Utils;
+using SPTarkov.Server.Core.Models.Spt.Tables;
+using SPTarkov.Server.Core.Utils.Json;
 using SPTarkov.Server.Core.Routers;
 using SPTarkov.Server.Core.Services;
 using SPTarkov.Server.Core.Utils;
@@ -18,31 +23,34 @@ using TraderGen.Validation;
 
 namespace TraderGen;
 
-public record ModMetadata : AbstractModMetadata
+public record ModMetadata : IModMetadata
 {
-    public override string ModGuid { get; init; } = "com.serenity.tradergen";
-    public override string Name { get; init; } = "TraderGen";
-    public override string Author { get; init; } = "Serenity";
-    public override List<string>? Contributors { get; init; }
-    public override SemanticVersioning.Version Version { get; init; } = new("2.2.0");
-    public override SemanticVersioning.Range SptVersion { get; init; } = new("4.0.13");
-    public override List<string>? Incompatibilities { get; init; }
-    public override Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; } = new()
+    public string ModGuid { get; init; } = "com.serenity.tradergen";
+    public string Name { get; init; } = "TraderGen";
+    public string Author { get; init; } = "Serenity";
+    public List<string>? Contributors { get; init; }
+    public SemanticVersioning.Version Version { get; init; } = new("2.3.0");
+    public SemanticVersioning.Range SptVersion { get; init; } = new("~4.1.0");
+    public List<string>? Incompatibilities { get; init; }
+    public Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; } = new()
     {
-        { "com.wtt.commonlib", new("~2.0.20") }
+        { "com.wtt.commonlib", new("~3.0.2") }
     };
-    public override string? Url { get; init; }
-    public override bool? IsBundleMod { get; init; } = false;
-    public override string? License { get; init; } = "MIT";
+    public string? Url { get; init; }
+    public bool HasPrepatcher { get; init; } = false;
+    public string License { get; init; } = "MIT";
 }
 
-[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 1)]
+[Injectable(TypePriority = OnLoadOrder.PostLoad + 1)]
 public class TraderGenPlugin(
     ISptLogger<TraderGenPlugin> logger,
     ModHelper modHelper,
     TraderLoader traderLoader,
     TraderRegistrar traderRegistrar,
-    DatabaseService databaseService,
+    TemplateTable templateTable,
+    TradersTable tradersTable,
+    HideoutTable hideoutTable,
+    LocaleTable localeTable,
     ImageRouter imageRouter,
     WTTServerCommonLib.WTTServerCommonLib wttCommon,
     ProfileHelper profileHelper,
@@ -50,11 +58,11 @@ public class TraderGenPlugin(
     TimeUtil timeUtil
 ) : IOnLoad
 {
-    public async Task OnLoad()
+    public async Task OnLoadAsync(CancellationToken cancellationToken)
     {
-        logger.LogWithColor("[TraderGen] ====================================", LogTextColor.Cyan);
-        logger.LogWithColor($"[TraderGen] TraderGen Framework v{new ModMetadata().Version} loading...", LogTextColor.Cyan);
-        logger.LogWithColor("[TraderGen] ====================================", LogTextColor.Cyan);
+        logger.LogWithColor("[TraderGen] ====================================", LogColor.Cyan);
+        logger.LogWithColor($"[TraderGen] TraderGen Framework v{new ModMetadata().Version} loading...", LogColor.Cyan);
+        logger.LogWithColor("[TraderGen] ====================================", LogColor.Cyan);
 
         // Load trader JSON files from traders/ directory
         var loadedTraders = traderLoader.LoadAllTraders();
@@ -63,12 +71,12 @@ public class TraderGenPlugin(
         {
             logger.LogWithColor(
                 "[TraderGen] No trader packs found. Place trader pack folders in: user/mods/TraderGen/traders/",
-                LogTextColor.Yellow
+                LogColor.Yellow
             );
             return;
         }
 
-        logger.LogWithColor($"[TraderGen] Found {loadedTraders.Count} trader definition(s). Registering...", LogTextColor.Cyan);
+        logger.LogWithColor($"[TraderGen] Found {loadedTraders.Count} trader definition(s). Registering...", LogColor.Cyan);
 
         var successCount = 0;
         var failCount = 0;
@@ -87,12 +95,12 @@ public class TraderGenPlugin(
             }
         }
 
-        logger.LogWithColor("[TraderGen] ====================================", LogTextColor.Cyan);
+        logger.LogWithColor("[TraderGen] ====================================", LogColor.Cyan);
         logger.LogWithColor(
             $"[TraderGen] Done! {successCount} trader(s) registered, {failCount} failed.",
-            failCount > 0 ? LogTextColor.Yellow : LogTextColor.Green
+            failCount > 0 ? LogColor.Yellow : LogColor.Green
         );
-        logger.LogWithColor("[TraderGen] ====================================", LogTextColor.Cyan);
+        logger.LogWithColor("[TraderGen] ====================================", LogColor.Cyan);
 
         // Load and register quests
         await LoadAndRegisterQuests(loadedTraders);
@@ -108,7 +116,7 @@ public class TraderGenPlugin(
         if (questPacks.Count == 0)
             return;
 
-        logger.LogWithColor($"[TraderGen] Found {questPacks.Count} quest pack(s). Processing...", LogTextColor.Cyan);
+        logger.LogWithColor($"[TraderGen] Found {questPacks.Count} quest pack(s). Processing...", LogColor.Cyan);
 
         var modPath = modHelper.GetAbsolutePathToModFolder(Assembly.GetExecutingAssembly());
         var questOutputDir = Path.Combine(modPath, "db", "CustomQuests");
@@ -129,15 +137,15 @@ public class TraderGenPlugin(
             var errors = QuestValidator.Validate(questPack.Definition, questPack.TraderId, packName);
             if (errors.Count > 0)
             {
-                logger.LogWithColor($"[TraderGen] Quest validation errors in '{packName}':", LogTextColor.Red);
+                logger.LogWithColor($"[TraderGen] Quest validation errors in '{packName}':", LogColor.Red);
                 foreach (var error in errors)
-                    logger.LogWithColor($"  \u2717 {error}", LogTextColor.Red);
+                    logger.LogWithColor($"  \u2717 {error}", LogColor.Red);
                 questPacksFailed++;
                 continue;
             }
 
             // Process custom pocket templates — generate item JSON in db/TraderGenPockets/ and replace customPocket with pockets ID
-            var pocketInjector = new CustomPocketInjector(databaseService);
+            var pocketInjector = new CustomPocketInjector(templateTable);
             var traderGenPocketsDir = System.IO.Path.Combine(modPath, "db", "TraderGenPockets");
             Directory.CreateDirectory(traderGenPocketsDir);
             foreach (var quest in questPack.Definition.StoryQuests)
@@ -164,7 +172,7 @@ public class TraderGenPlugin(
             {
                 var count = QuestBuilder.BuildQuestFiles(
                     questPack.TraderId, storyQuests, questPack.Definition.ProductionSchemes, questOutputDir,
-                    questPack.PackFolder, questPack.Definition.DefaultQuestIcon, databaseService, logger);
+                    questPack.PackFolder, questPack.Definition.DefaultQuestIcon, templateTable, tradersTable, localeTable, logger);
                 if (count > 0)
                     totalStoryQuests += count;
                 else
@@ -173,7 +181,7 @@ public class TraderGenPlugin(
         }
 
         // Inject custom production schemes into SPT's hideout database
-        ProductionSchemeInjector.InjectSchemes(questPacks, databaseService, logger);
+        ProductionSchemeInjector.InjectSchemes(questPacks, hideoutTable, logger);
 
         // Register custom zones from all quest packs
         await RegisterQuestZones(questPacks, modPath);
@@ -196,7 +204,7 @@ public class TraderGenPlugin(
 
             logger.LogWithColor(
                 $"[TraderGen] Registered {totalStoryQuests} story quest(s) via WTT CustomQuestService.",
-                LogTextColor.Green);
+                LogColor.Green);
         }
 
         // Process rotating quests via repeatable quest system
@@ -209,7 +217,7 @@ public class TraderGenPlugin(
         {
             logger.LogWithColor(
                 $"[TraderGen] {questPacksFailed} quest pack(s) failed validation or building.",
-                LogTextColor.Yellow);
+                LogColor.Yellow);
         }
     }
 
@@ -263,12 +271,12 @@ public class TraderGenPlugin(
 
         logger.LogWithColor(
             $"[TraderGen] Registered {allZones.Count} quest zone(s) via WTT CustomQuestZoneService.",
-            LogTextColor.Green);
+            LogColor.Green);
     }
 
     private void SetupRepeatableQuests(List<(List<Models.RotatingQuestTemplate> Templates, string TraderId, string PackFolder)> allTemplates)
     {
-        logger.LogWithColor("[TraderGen] Setting up repeatable quests via Harmony patch...", LogTextColor.Cyan);
+        logger.LogWithColor("[TraderGen] Setting up repeatable quests via Harmony patch...", LogColor.Cyan);
 
         var totalTemplates = 0;
         foreach (var (templates, traderId, packFolder) in allTemplates)
@@ -293,7 +301,7 @@ public class TraderGenPlugin(
 
         if (totalTemplates == 0)
         {
-            logger.LogWithColor("[TraderGen] No repeatable quest templates found.", LogTextColor.Yellow);
+            logger.LogWithColor("[TraderGen] No repeatable quest templates found.", LogColor.Yellow);
             return;
         }
 
@@ -305,20 +313,20 @@ public class TraderGenPlugin(
         new GetRepeatableQuestsPatch().Enable();
 
         // Register locale entries via standard registrar
-        RepeatableQuestLocaleRegistrar.RegisterLocales(databaseService, logger);
+        RepeatableQuestLocaleRegistrar.RegisterLocales(localeTable, logger);
 
         logger.LogWithColor(
             $"[TraderGen] Registered {totalTemplates} quest template(s) from {allTemplates.Count} trader(s). Quests will be generated on-demand via patch.",
-            LogTextColor.Green);
+            LogColor.Green);
     }
 
     // Pre-registers locale entries at startup so quest descriptions work when generated.
     private void PreRegisterLocales(List<(List<Models.RotatingQuestTemplate> Templates, string TraderId, string PackFolder)> allTemplates)
     {
-        logger.LogWithColor("[TraderGen] Pre-registering locale entries for repeatable quests...", LogTextColor.Cyan);
+        logger.LogWithColor("[TraderGen] Pre-registering locale entries for repeatable quests...", LogColor.Cyan);
 
         var totalEntries = 0;
-        var localeTable = databaseService.GetLocales().Global;
+        var globalLocales = localeTable.Global;
 
         foreach (var (templates, traderId, packFolder) in allTemplates)
         {
@@ -363,14 +371,14 @@ public class TraderGenPlugin(
         }
 
         // Register locales with SPT database
-        var locales = RepeatableQuestLocaleStore.GetAll();
+        var storedLocales = RepeatableQuestLocaleStore.GetAll();
         var conditionLocales = RepeatableQuestLocaleStore.GetAllConditions();
 
-        foreach (var (locale, lazyDict) in localeTable)
+        foreach (var (locale, lazyDict) in globalLocales)
         {
             lazyDict.AddTransformer(dict =>
             {
-                foreach (var (questId, (name, description)) in locales)
+                foreach (var (questId, (name, description)) in storedLocales)
                 {
                     dict.TryAdd($"{questId} name", name);
                     dict.TryAdd($"{questId} description", description);
@@ -394,13 +402,13 @@ public class TraderGenPlugin(
         }
 
         logger.LogWithColor(
-            $"[TraderGen] Pre-registered {totalEntries} locale entries across {locales.Count} quests.",
-            LogTextColor.Green);
+            $"[TraderGen] Pre-registered {totalEntries} locale entries across {storedLocales.Count} quests.",
+            LogColor.Green);
     }
 
     private void ProcessTraderUnlockQuests(List<TraderLoader.LoadedTrader> loadedTraders)
     {
-        var quests = databaseService.GetQuests();
+        var quests = templateTable.Quests;
         var patchedCount = 0;
 
         foreach (var loaded in loadedTraders)
@@ -421,7 +429,7 @@ public class TraderGenPlugin(
             {
                 logger.LogWithColor(
                     $"[TraderGen] Warning: Trader '{trader.Nickname}' has invalid unlockQuestId '{trader.UnlockQuestId}'. Skipping.",
-                    LogTextColor.Yellow);
+                    LogColor.Yellow);
                 continue;
             }
 
@@ -429,7 +437,7 @@ public class TraderGenPlugin(
             {
                 logger.LogWithColor(
                     $"[TraderGen] Warning: Trader '{trader.Nickname}' unlockQuestId '{trader.UnlockQuestId}' not found in quest database. Skipping.",
-                    LogTextColor.Yellow);
+                    LogColor.Yellow);
                 continue;
             }
 
@@ -447,7 +455,7 @@ public class TraderGenPlugin(
             {
                 logger.LogWithColor(
                     $"[TraderGen] Trader '{trader.Nickname}' already has a TraderUnlock reward on quest '{trader.UnlockQuestId}'. Skipping.",
-                    LogTextColor.Cyan);
+                    LogColor.Cyan);
                 continue;
             }
 
@@ -456,7 +464,7 @@ public class TraderGenPlugin(
                 Id = new MongoId(),
                 Type = RewardType.TraderUnlock,
                 Target = trader.Id,
-                TraderId = trader.Id,
+                TraderId = new StringOrInt(trader.Id.ToString(), null),
                 IsHidden = false,
                 Unknown = false,
             });
@@ -464,14 +472,14 @@ public class TraderGenPlugin(
             patchedCount++;
             logger.LogWithColor(
                 $"[TraderGen] Trader '{trader.Nickname}' will be unlocked by quest '{trader.UnlockQuestId}'.",
-                LogTextColor.Green);
+                LogColor.Green);
         }
 
         if (patchedCount > 0)
         {
             logger.LogWithColor(
                 $"[TraderGen] Patched {patchedCount} external quest(s) with TraderUnlock rewards.",
-                LogTextColor.Green);
+                LogColor.Green);
         }
     }
 

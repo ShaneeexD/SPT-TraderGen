@@ -3,13 +3,15 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
 using SPTarkov.DI.Annotations;
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Common.Models.Logging;
+using SPTarkov.Server.Core.Helpers.Server;
 using SPTarkov.Server.Core.Migration;
-using SPTarkov.Server.Core.Models.Utils;
-using SPTarkov.Server.Core.Migration.Migrations;
+using SPTarkov.Server.Core.Migration.Migrations.Fixes;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Eft.Profile;
+using SPTarkov.Server.Core.Models.Spt.Tables;
+using Grid = SPTarkov.Server.Core.Models.Eft.Common.Tables.Grid;
 using SPTarkov.Server.Core.Models.Enums;
 using SPTarkov.Server.Core.Services;
 
@@ -17,13 +19,8 @@ namespace TraderGen.Migration;
 
 // Ensures TraderGen custom pocket templates survive the InvalidPocketFix migration.
 [Injectable]
-public class TraderGenPocketMigration(DatabaseService databaseService, ModHelper modHelper, ISptLogger<TraderGenPocketMigration> logger) : AbstractProfileMigration
+public class TraderGenPocketMigration(TemplateTable templateTable, ModHelper modHelper) : AbstractProfileMigration
 {
-#pragma warning disable CS0618
-    public override string FromVersion => "~4.0";
-    public override string ToVersion => "~4.0";
-#pragma warning restore CS0618
-
     public override string MigrationName => "TraderGenPocketMigration";
 
     // Run AFTER InvalidPocketFix so PostMigrate can fix what it may have reset
@@ -116,7 +113,7 @@ public class TraderGenPocketMigration(DatabaseService databaseService, ModHelper
         var questsDir = System.IO.Path.Combine(modPath, "traders");
         if (!System.IO.Directory.Exists(questsDir)) return 0;
 
-        var items = databaseService.GetItems();
+        var items = templateTable.Items;
 
         // Use the default pocket template as the base so special slots are preserved.
         // The default 627a4e6b255f7527fb05a0f6 contains SpecialSlot1/2/3 entries, while

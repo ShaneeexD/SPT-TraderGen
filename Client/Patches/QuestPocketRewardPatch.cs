@@ -3,6 +3,7 @@ using BepInEx.Logging;
 using Comfort.Common;
 using EFT;
 using EFT.InventoryLogic;
+using EFT.UI;
 using EFT.Quests;
 using HarmonyLib;
 
@@ -16,11 +17,11 @@ namespace TraderGen.Client.Patches
         internal static void Init(ManualLogSource log) => Log = log;
 
         // Overrides the reward display text for Pockets rewards.
-        [HarmonyPatch(typeof(GClass3812), "smethod_1")]
+        [HarmonyPatch(typeof(TaskRewardValuesTextGetter), nameof(TaskRewardValuesTextGetter.GetRewardValues))]
         internal static class Smethod1Patch
         {
             static void Postfix(
-                QuestRewardDataClass reward,
+                QuestReward reward,
                 ref string typeText,
                 ref string nameText,
                 ref string valueText,
@@ -59,7 +60,7 @@ namespace TraderGen.Client.Patches
         {
             try
             {
-                var app = Singleton<ClientApplication<ISession>>.Instance;
+                var app = Singleton<ClientApplication<IClientSession>>.Instance;
                 if (app == null) return null;
 
                 var session = app.Session;
@@ -88,7 +89,7 @@ namespace TraderGen.Client.Patches
             if (string.IsNullOrEmpty(templateId))
                 return 0;
 
-            var itemFactory = Singleton<ItemFactoryClass>.Instance;
+            var itemFactory = Singleton<ItemFactory>.Instance;
             if (itemFactory == null)
                 return 0;
 

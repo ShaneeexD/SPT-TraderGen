@@ -4,7 +4,7 @@
     <RootNamespace>TraderGen.Client</RootNamespace>
     <LangVersion>latest</LangVersion>
     <OutputType>Library</OutputType>
-    <Version>2.2.0</Version>
+    <Version>2.3.0</Version>
     <OutputPath>bin\$(Configuration)\</OutputPath>
     <AssemblyName>TraderGen.Client</AssemblyName>
     <SPTPath>C:\SPT</SPTPath>
@@ -23,7 +23,7 @@
 
     <!-- Game assemblies -->
     <Reference Include="Assembly-CSharp">
-      <HintPath>D:\SPT MODS\Refs\Assembly-CSharp.dll</HintPath>
+      <HintPath>$(SPTPath)\EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine">

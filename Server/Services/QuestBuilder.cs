@@ -2,9 +2,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using SPTarkov.Server.Core.Models.Common;
 using SptTables = SPTarkov.Server.Core.Models.Eft.Common.Tables;
-using SPTarkov.Server.Core.Models.Logging;
-using SPTarkov.Server.Core.Models.Utils;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Common.Models.Logging;
+using SPTarkov.Server.Core.Models.Spt.Tables;
 using TraderGen.Models;
 using System.Globalization;
 using System.Linq;
@@ -30,7 +29,9 @@ public static class QuestBuilder
         string outputBaseDir,
         string packFolder,
         string? defaultQuestIcon,
-        DatabaseService databaseService,
+        TemplateTable templateTable,
+        TradersTable tradersTable,
+        LocaleTable localeTable,
         ISptLogger<TraderGenPlugin> logger)
     {
         var traderDir = Path.Combine(outputBaseDir, traderId);
@@ -87,7 +88,7 @@ public static class QuestBuilder
         {
             // Resolve quest icon
             var iconFileName = ResolveQuestIcon(quest, packFolder, defaultQuestIcon, imagesDir);
-            var bsgQuest = BuildStoryQuest(quest, allLocales, iconFileName, databaseService, schemeDict);
+            var bsgQuest = BuildStoryQuest(quest, allLocales, iconFileName, templateTable, localeTable, schemeDict);
             allQuests[quest.Id] = bsgQuest;
             BuildQuestAssortUnlocks(quest.Id, quest.Rewards, questAssortSuccess);
             count++;
@@ -106,10 +107,10 @@ public static class QuestBuilder
 
         logger.LogWithColor(
             $"[TraderGen] Built {count} quest(s) for trader {traderId} → {traderDir}",
-            LogTextColor.Green);
+            LogColor.Green);
 
         // Resolve quest-assort keys against the trader's already-built assort and apply to the live database.
-        var trader = databaseService.GetTables().Traders.GetValueOrDefault(traderId);
+        var trader = tradersTable.GetValueOrDefault(traderId);
         if (trader != null)
         {
             if (!trader.QuestAssort.TryGetValue("success", out var successMap))
@@ -196,7 +197,8 @@ public static class QuestBuilder
         StoryQuestDefinition quest,
         JsonObject locales,
         string iconFileName,
-        DatabaseService databaseService,
+        TemplateTable templateTable,
+        LocaleTable localeTable,
         Dictionary<string, ProductionSchemeDefinition> schemes)
     {
         var questId = quest.Id;
@@ -243,7 +245,7 @@ public static class QuestBuilder
         for (var i = 0; i < quest.Objectives.Count; i++)
         {
             var obj = quest.Objectives[i];
-            var conditions = BuildObjectiveCondition(obj, i, conditionIndex, locales, questId, databaseService).ToList();
+            var conditions = BuildObjectiveCondition(obj, i, conditionIndex, locales, questId, templateTable, localeTable).ToList();
             foreach (var c in conditions)
             {
                 finishConditions.Add(c);
@@ -309,18 +311,18 @@ public static class QuestBuilder
 
     // Objective builders
 
-    private static IEnumerable<JsonNode> BuildObjectiveCondition(QuestObjective obj, int objectiveIndex, int conditionIndex, JsonObject locales, string questId, DatabaseService databaseService)
+    private static IEnumerable<JsonNode> BuildObjectiveCondition(QuestObjective obj, int objectiveIndex, int conditionIndex, JsonObject locales, string questId, TemplateTable templateTable, LocaleTable localeTable)
     {
         switch (obj.Type.ToLowerInvariant())
         {
             case "handover_item":
-                yield return BuildHandoverCondition(obj, objectiveIndex, conditionIndex, false, locales, questId, databaseService);
+                yield return BuildHandoverCondition(obj, objectiveIndex, conditionIndex, false, locales, questId, templateTable, localeTable);
                 break;
             case "handover_fir_item":
-                yield return BuildHandoverCondition(obj, objectiveIndex, conditionIndex, true, locales, questId, databaseService);
+                yield return BuildHandoverCondition(obj, objectiveIndex, conditionIndex, true, locales, questId, templateTable, localeTable);
                 break;
             case "find_item":
-                foreach (var c in BuildFindItemCondition(obj, objectiveIndex, conditionIndex, locales, questId, databaseService))
+                foreach (var c in BuildFindItemCondition(obj, objectiveIndex, conditionIndex, locales, questId, templateTable, localeTable))
                 {
                     yield return c;
                 }
@@ -351,13 +353,13 @@ public static class QuestBuilder
         }
     }
 
-    private static JsonObject BuildHandoverCondition(QuestObjective obj, int objectiveIndex, int conditionIndex, bool foundInRaid, JsonObject locales, string questId, DatabaseService databaseService)
+    private static JsonObject BuildHandoverCondition(QuestObjective obj, int objectiveIndex, int conditionIndex, bool foundInRaid, JsonObject locales, string questId, TemplateTable templateTable, LocaleTable localeTable)
     {
         var condId = DeriveStableId($"{questId}:obj{objectiveIndex}:cond");
 
         // Build locale for this objective
         var firText = foundInRaid ? "found in raid " : "";
-        var itemName = GetItemName(databaseService, obj.ItemTpl);
+        var itemName = GetItemName(templateTable, localeTable, obj.ItemTpl);
         var desc = obj.Description ?? $"Hand over {obj.Count} {firText}{itemName}";
         locales[condId] = desc;
         LocaleFixups.Add(new LocaleFixupEntry(condId, obj.ItemTpl, obj.Count, "handover", obj.Description));
@@ -381,13 +383,13 @@ public static class QuestBuilder
         };
     }
 
-    private static IEnumerable<JsonNode> BuildFindItemCondition(QuestObjective obj, int objectiveIndex, int conditionIndex, JsonObject locales, string questId, DatabaseService databaseService)
+    private static IEnumerable<JsonNode> BuildFindItemCondition(QuestObjective obj, int objectiveIndex, int conditionIndex, JsonObject locales, string questId, TemplateTable templateTable, LocaleTable localeTable)
     {
         var findCondId = DeriveStableId($"{questId}:obj{objectiveIndex}:find");
         var handoverCondId = DeriveStableId($"{questId}:obj{objectiveIndex}:handover");
         var visCondId = DeriveStableId($"{questId}:obj{objectiveIndex}:vis");
 
-        var itemName = GetItemName(databaseService, obj.ItemTpl);
+        var itemName = GetItemName(templateTable, localeTable, obj.ItemTpl);
         var desc = obj.Description ?? $"Find {obj.Count} {itemName}";
         locales[findCondId] = desc;
         LocaleFixups.Add(new LocaleFixupEntry(findCondId, obj.ItemTpl, obj.Count, "find", obj.Description));
@@ -447,13 +449,13 @@ public static class QuestBuilder
         };
     }
 
-    private static string GetItemName(DatabaseService databaseService, string? itemTpl)
+    private static string GetItemName(TemplateTable templateTable, LocaleTable localeTable, string? itemTpl)
     {
         if (string.IsNullOrWhiteSpace(itemTpl)) return "item";
 
         try
         {
-            var globalLocales = databaseService.GetLocales().Global;
+            var globalLocales = localeTable.Global;
             if (globalLocales.TryGetValue("en", out var enLocale))
             {
                 var data = enLocale.Value;
@@ -478,7 +480,7 @@ public static class QuestBuilder
 
         try
         {
-            var items = databaseService.GetItems();
+            var items = templateTable.Items;
             if (items.TryGetValue(itemTpl, out var itemTemplate) && !string.IsNullOrWhiteSpace(itemTemplate.Name))
             {
                 return itemTemplate.Name;

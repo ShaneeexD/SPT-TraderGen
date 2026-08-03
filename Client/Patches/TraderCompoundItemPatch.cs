@@ -4,6 +4,7 @@ using System.Reflection;
 using BepInEx.Logging;
 using EFT;
 using EFT.InventoryLogic;
+using EFT.Trading;
 using EFT.UI;
 using EFT.UI.DragAndDrop;
 using HarmonyLib;
@@ -16,27 +17,23 @@ namespace TraderGen.Client.Patches
 
         internal static void Init(ManualLogSource log) => Log = log;
 
-        private static readonly FieldInfo BarterSchemeDictField = typeof(TraderAssortmentControllerClass)
-            .GetField("Dictionary_1", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly FieldInfo BarterSchemeDictField = typeof(Assortment)
+            .GetField("_schemes", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
-        private static readonly FieldInfo CloneDictField = typeof(TraderAssortmentControllerClass)
-            .GetField("Dictionary_0", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly FieldInfo CloneDictField = typeof(Assortment)
+            .GetField("_clones", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
-        private static readonly FieldInfo TradeModeField = typeof(TradingItemView)
-            .GetField("etradeMode_0", BindingFlags.NonPublic | BindingFlags.Instance);
-
-        // TraderAssortmentControllerClass.GetSchemeForItem returns null for non-empty CompoundItems
+        // Assortment.GetSchemeForItem returns null for non-empty CompoundItems
         // because GClass3750.IsExchangeable rejects them. This patch bypasses that check and
         // looks up the barter scheme directly so backpacks/rigs with items can be purchased.
-        [HarmonyPatch(typeof(TraderAssortmentControllerClass), "GetSchemeForItem")]
+        [HarmonyPatch(typeof(Assortment), "GetSchemeForItem")]
         internal static class GetSchemeForItemPatch
         {
-            static bool Prefix(Item item, TraderAssortmentControllerClass __instance, ref BarterScheme __result)
+            static bool Prefix(Item item, Assortment __instance, ref BarterScheme __result)
             {
-                if (item == null)
+                if (item == null || !(item is CompoundItem))
                 {
-                    __result = null;
-                    return false;
+                    return true;
                 }
 
                 var dict = BarterSchemeDictField?.GetValue(__instance) as Dictionary<string, BarterScheme>;
@@ -46,28 +43,25 @@ namespace TraderGen.Client.Patches
                     return false;
                 }
 
-                __result = null;
-                return false;
+                return true;
             }
         }
 
         // Same fix for GetSchemeForClone
-        [HarmonyPatch(typeof(TraderAssortmentControllerClass), "GetSchemeForClone")]
+        [HarmonyPatch(typeof(Assortment), "GetSchemeForClone")]
         internal static class GetSchemeForClonePatch
         {
-            static bool Prefix(Item item, TraderAssortmentControllerClass __instance, ref BarterScheme __result)
+            static bool Prefix(Item item, Assortment __instance, ref BarterScheme __result)
             {
-                if (item == null)
+                if (item == null || !(item is CompoundItem))
                 {
-                    __result = null;
-                    return false;
+                    return true;
                 }
 
                 var cloneDict = CloneDictField?.GetValue(__instance) as Dictionary<Item, Item>;
                 if (cloneDict == null || !cloneDict.TryGetValue(item, out var originalItem))
                 {
-                    __result = null;
-                    return false;
+                    return true;
                 }
 
                 var dict = BarterSchemeDictField?.GetValue(__instance) as Dictionary<string, BarterScheme>;
@@ -77,27 +71,9 @@ namespace TraderGen.Client.Patches
                     return false;
                 }
 
-                __result = null;
-                return false;
-            }
-        }
-
-        // TradingItemView.method_39 greys out (CanvasGroup.alpha = 0.3) any CompoundItem
-        // that has items in its grids. This prevents backpacks/rigs with contents from
-        // appearing buyable in the trader grid even though the scheme lookup works.
-        // We skip this for purchase mode items owned by a trader.
-        [HarmonyPatch(typeof(TradingItemView), "method_39")]
-        internal static class Method39Patch
-        {
-            static bool Prefix(TradingItemView __instance)
-            {
-                var tradeMode = (ETradeMode?)TradeModeField?.GetValue(__instance);
-                if (tradeMode == ETradeMode.Purchase)
-                {
-                    return false; // skip original method_39 entirely
-                }
                 return true;
             }
         }
+
     }
 }

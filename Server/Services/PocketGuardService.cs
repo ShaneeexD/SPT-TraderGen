@@ -2,13 +2,15 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using HarmonyLib;
+using SPTarkov.Reflection.Patching;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Server.Core.Helpers.Server;
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Profile;
 using SPTarkov.Server.Core.Models.Enums;
-using SPTarkov.Server.Core.Models.Utils;
 using SPTarkov.Server.Core.Servers;
 using SPTarkov.Server.Core.Services;
 
@@ -22,7 +24,7 @@ public class PocketRestoreService(
     ModHelper modHelper
 ) : IOnLoad
 {
-    public async Task OnLoad()
+    public async Task OnLoadAsync(CancellationToken cancellationToken)
     {
         try
         {
@@ -100,28 +102,42 @@ public class PocketRestoreService(
 }
 
 // Restores the correct custom pocket TPL before every profile save.
-[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 2)]
+[Injectable(TypePriority = OnLoadOrder.PostLoad + 2)]
 public class PocketGuardService(
     ISptLogger<PocketGuardService> logger,
-    SaveServer saveServer,
     ModHelper modHelper
 ) : IOnLoad
 {
+    private static PocketGuardService? _instance;
+    private readonly ISptLogger<PocketGuardService> _logger = logger;
     private const string DefaultPocketTpl = "627a4e6b255f7527fb05a0f6";
     private const string CallbackId = "TraderGen_PocketGuard";
 
     // questId -> correctTpl, built once at startup
     private Dictionary<string, string>? _questPocketMap;
 
-    public async Task OnLoad()
+    public async Task OnLoadAsync(CancellationToken cancellationToken)
     {
         _questPocketMap = BuildQuestPocketRewardMap();
         if (_questPocketMap.Count == 0) return;
 
-#pragma warning disable CS0618
-        saveServer.AddBeforeSaveCallback(CallbackId, GuardProfile);
-#pragma warning restore CS0618
+        _instance = this;
+        new PocketSaveFixPatch().Enable();
         await Task.CompletedTask;
+    }
+
+    public static void GuardBeforeSave(SaveServer saveServer, MongoId sessionId)
+    {
+        if (_instance == null) return;
+
+        try
+        {
+            _instance.GuardProfile(saveServer.GetProfile(sessionId));
+        }
+        catch (Exception ex)
+        {
+            _instance._logger.Error($"[TraderGen] PocketGuard save fix failed: {ex.Message}");
+        }
     }
 
     private SptProfile GuardProfile(SptProfile profile)
@@ -150,7 +166,7 @@ public class PocketGuardService(
         }
         catch (Exception ex)
         {
-            logger.Error($"[TraderGen] PocketGuard error: {ex.Message}");
+            _logger.Error($"[TraderGen] PocketGuard error: {ex.Message}");
         }
 
         return profile!;
@@ -193,7 +209,7 @@ public class PocketGuardService(
         }
         catch (Exception ex)
         {
-            logger.Error($"[TraderGen] PocketGuard failed to build quest map: {ex.Message}");
+            _logger.Error($"[TraderGen] PocketGuard failed to build quest map: {ex.Message}");
         }
 
         return result;
@@ -215,5 +231,19 @@ public class PocketGuardService(
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes("tradergen_pocket_" + layoutKey));
         return Convert.ToHexStringLower(hash[..12]);
+    }
+}
+
+public class PocketSaveFixPatch : AbstractPatch
+{
+    protected override MethodBase GetTargetMethod()
+    {
+        return AccessTools.Method(typeof(SaveServer), nameof(SaveServer.SaveProfileAsync));
+    }
+
+    [PatchPrefix]
+    public static void Prefix(SaveServer __instance, MongoId sessionID)
+    {
+        PocketGuardService.GuardBeforeSave(__instance, sessionID);
     }
 }

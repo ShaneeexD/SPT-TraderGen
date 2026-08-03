@@ -1,7 +1,8 @@
 using System.Reflection;
 using HarmonyLib;
 using SPTarkov.Reflection.Patching;
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Server.Core.Helpers.Profile;
+using SPTarkov.Server.Core.Helpers.Traders;
 using SPTarkov.Server.Core.Models.Common;
 
 namespace TraderGen.Patches;

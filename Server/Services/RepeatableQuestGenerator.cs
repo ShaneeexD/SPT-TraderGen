@@ -3,8 +3,7 @@ using System.Text;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Enums;
-using SPTarkov.Server.Core.Models.Logging;
-using SPTarkov.Server.Core.Models.Utils;
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.Server.Core.Utils.Json;
 using TraderGen.Models;
 
@@ -299,7 +298,7 @@ public static class RepeatableQuestGenerator
 
         logger.LogWithColor(
             $"[TraderGen] Generated repeatable quest '{name}' ({template.Rotation}) for trader {traderId}",
-            LogTextColor.Green);
+            LogColor.Green);
 
         return quest;
     }

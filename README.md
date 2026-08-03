@@ -1,4 +1,4 @@
-# TraderGen — Custom Trader Framework for SPTarkov 4.0.13
+# TraderGen — Custom Trader Framework for SPTarkov 4.1.0
 
 A dependency/framework mod that lets anyone, including **non-programmers**, create custom traders for SPTarkov using simple JSON files. Includes a web-based TraderGen Tool for generating trader packs visually.
 
@@ -364,7 +364,7 @@ The TraderGen Tool export zip is already structured for distribution — users j
 
 When publishing:
 
-1. **State the dependencies**: Your mod requires `com.serenity.tradergen` v2.0.3+ and `com.wtt.commonlib` v2.0.20+ (WTT - CommonLib)
+1. **State the dependencies**: Your mod requires `com.serenity.tradergen` v2.0.3+ and `com.wtt.commonlib` v3.0.2+ (WTT - CommonLib)
 2. **Do not include** the TraderGen/WTT-CommonLib DLL or other authors' packs in your zip
 3. **Include your assets**: Ensure `assets/avatar.jpg` and any quest icons are present — **do not rename them**, the mod references them by their generated names
 4. **Test** by extracting and running the server before publishing
@@ -459,10 +459,10 @@ The filename must match SPT's internal language key:
 
 ## Technical Details
 
-- **SPT Version**: 4.0.13
-- **Framework**: .NET 9.0, C#
-- **DI Pattern**: `[Injectable]` + `IOnLoad` (runs at `PostDBModLoader + 1`)
-- **NuGet Packages**: `SPTarkov.Common`, `SPTarkov.DI`, `SPTarkov.Server.Core` (4.0.13)
+- **SPT Version**: 4.1.0
+- **Framework**: .NET 10.0, C#
+- **DI Pattern**: `[Injectable]` + `IOnLoad` (runs at `PostLoad + 1`)
+- **NuGet Packages**: `SPTarkov.Common`, `SPTarkov.DI`, `SPTarkov.Server.Core` (4.1.0)
 - **Quest integration**: Story quests via WTT CustomQuests library; rotating quests injected directly into the SPT repeatable quest pool
 - **Runtime dependency**: `com.wtt.commonlib` (WTT CommonLib) — required for quest registration
 

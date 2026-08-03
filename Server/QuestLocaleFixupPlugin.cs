@@ -1,8 +1,7 @@
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
-using SPTarkov.Server.Core.Models.Logging;
-using SPTarkov.Server.Core.Models.Utils;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Common.Models.Logging;
+using SPTarkov.Server.Core.Models.Spt.Tables;
 using TraderGen.Services;
 
 namespace TraderGen;
@@ -10,13 +9,13 @@ namespace TraderGen;
 // Runs after all mods have loaded (including ItemGen) so that custom item names can be resolved
 // into TraderGen-generated quest locale entries. TraderGen builds quest files before ItemGen
 // injects its items, so the initial locale files may contain raw template IDs instead of names.
-[Injectable(TypePriority = OnLoadOrder.PostSptModLoader)]
+[Injectable(TypePriority = OnLoadOrder.PostLoad + 2)]
 public class QuestLocaleFixupPlugin(
     ISptLogger<QuestLocaleFixupPlugin> logger,
-    DatabaseService databaseService)
+    LocaleTable localeTable)
     : IOnLoad
 {
-    public Task OnLoad()
+    public Task OnLoadAsync(CancellationToken cancellationToken)
     {
         if (QuestBuilder.LocaleFixups.Count == 0)
         {
@@ -25,10 +24,10 @@ public class QuestLocaleFixupPlugin(
 
         try
         {
-            var globalLocales = databaseService.GetLocales().Global;
+            var globalLocales = localeTable.Global;
             if (!globalLocales.TryGetValue("en", out var enLocale))
             {
-                logger.LogWithColor("[TraderGen] Could not find English locale for quest item name fixup.", LogTextColor.Yellow);
+                logger.LogWithColor("[TraderGen] Could not find English locale for quest item name fixup.", LogColor.Yellow);
                 return Task.CompletedTask;
             }
 
@@ -79,7 +78,7 @@ public class QuestLocaleFixupPlugin(
 
             if (entriesToPatch > 0)
             {
-                logger.LogWithColor($"[TraderGen] Registered locale transformer for {entriesToPatch} quest objective(s); item names will be resolved after custom item mods load.", LogTextColor.Cyan);
+                logger.LogWithColor($"[TraderGen] Registered locale transformer for {entriesToPatch} quest objective(s); item names will be resolved after custom item mods load.", LogColor.Cyan);
             }
         }
         catch (Exception ex)

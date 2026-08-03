@@ -5,10 +5,10 @@ using SPTarkov.Server.Core.DI;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Enums;
-using SPTarkov.Server.Core.Models.Logging;
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.Server.Core.Models.Spt.Config;
-using SPTarkov.Server.Core.Helpers;
-using SPTarkov.Server.Core.Models.Utils;
+using SPTarkov.Server.Core.Helpers.Server;
+using SPTarkov.Server.Core.Models.Spt.Tables;
 using SPTarkov.Server.Core.Routers;
 using SPTarkov.Server.Core.Servers;
 using SPTarkov.Server.Core.Services;
@@ -19,19 +19,22 @@ using Path = System.IO.Path;
 namespace TraderGen.Services;
 
 // Registers trader definitions into the SPT database.
-[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 1)]
+[Injectable(TypePriority = OnLoadOrder.PostLoad + 1)]
 public class TraderRegistrar(
     ISptLogger<TraderRegistrar> logger,
     ICloner cloner,
-    DatabaseService databaseService,
+    TemplateTable templateTable,
+    TradersTable tradersTable,
+    LocaleTable localeTable,
     ImageRouter imageRouter,
-    ConfigServer configServer,
+    TraderConfig traderConfig,
+    RagfairConfig ragfairConfig,
     ModHelper modHelper,
     LocaleLoader localeLoader
 )
 {
-    private readonly TraderConfig _traderConfig = configServer.GetConfig<TraderConfig>();
-    private readonly RagfairConfig _ragfairConfig = configServer.GetConfig<RagfairConfig>();
+    private readonly TraderConfig _traderConfig = traderConfig;
+    private readonly RagfairConfig _ragfairConfig = ragfairConfig;
 
     // Default buy categories (all known vanilla item parent IDs).
     private static readonly List<string> DefaultBuyCategories =
@@ -124,7 +127,7 @@ public class TraderRegistrar(
 
             logger.LogWithColor(
                 $"[TraderGen] Successfully registered trader '{trader.Nickname}' (ID: {trader.Id})",
-                LogTextColor.Green
+                LogColor.Green
             );
             return true;
         }
@@ -132,7 +135,7 @@ public class TraderRegistrar(
         {
             logger.LogWithColor(
                 $"[TraderGen] Failed to register trader '{trader.Nickname}': {ex.Message}",
-                LogTextColor.Red
+                LogColor.Red
             );
             return false;
         }
@@ -145,7 +148,7 @@ public class TraderRegistrar(
         var buyProhibited = trader.BuyProhibitedItems ?? new List<string>();
 
         // Validate buy categories against actual item parent IDs in the DB
-        var allItems = databaseService.GetItems();
+        var allItems = templateTable.Items;
         var validParentIds = new HashSet<string>(allItems.Values.Select(i => i.Parent.ToString()).Where(p => !string.IsNullOrEmpty(p)));
         var buyCategories = new List<string>();
         var skippedCategories = new List<string>();
@@ -164,20 +167,20 @@ public class TraderRegistrar(
         {
             logger.LogWithColor(
                 $"[TraderGen] Skipped invalid buy categories for '{trader.Nickname}': {string.Join(", ", skippedCategories)}",
-                LogTextColor.Red
+                LogColor.Red
             );
         }
         if (buyCategories.Count == 0)
         {
             logger.LogWithColor(
                 $"[TraderGen] WARNING: No valid buy categories for '{trader.Nickname}', using all valid parents as fallback.",
-                LogTextColor.Red
+                LogColor.Red
             );
             buyCategories = validParentIds.Take(20).ToList();
         }
 
         // Auto-prohibit items with zero/missing handbook prices to prevent client crashes
-        var handbook = databaseService.GetHandbook();
+        var handbook = templateTable.Handbook;
         var pricedItems = new HashSet<string>(handbook.Items
             .Where(h => h.Price > 0)
             .Select(h => h.Id.ToString()));
@@ -197,7 +200,7 @@ public class TraderRegistrar(
         {
             logger.LogWithColor(
                 $"[TraderGen] Auto-prohibited {zeroPriceItems.Count} zero-price item(s) for '{trader.Nickname}' to prevent client crashes.",
-                LogTextColor.Yellow
+                LogColor.Yellow
             );
         }
 
@@ -217,7 +220,7 @@ public class TraderRegistrar(
         }
         logger.LogWithColor(
             $"[TraderGen] Auto-prohibited currency items for '{trader.Nickname}'.",
-            LogTextColor.Yellow
+            LogColor.Yellow
         );
 
         var currency = trader.Currency.ToUpperInvariant() switch
@@ -340,7 +343,7 @@ public class TraderRegistrar(
         {
             logger.LogWithColor(
                 $"[TraderGen] Warning: Avatar file not found at '{avatarAbsPath}'. Trader will have no image.",
-                LogTextColor.Yellow
+                LogColor.Yellow
             );
             return;
         }
@@ -384,11 +387,11 @@ public class TraderRegistrar(
             Dialogue = [],
         };
 
-        if (!databaseService.GetTables().Traders.TryAdd(traderBase.Id, traderData))
+        if (!tradersTable.TryAdd(traderBase.Id, traderData))
         {
             logger.LogWithColor(
                 $"[TraderGen] Warning: Trader ID '{traderBase.Id}' already exists in database. Skipping.",
-                LogTextColor.Yellow
+                LogColor.Yellow
             );
         }
     }
@@ -396,7 +399,7 @@ public class TraderRegistrar(
     // Add locale entries for all languages.
     private void AddTraderLocales(TraderBase traderBase, TraderDefinition trader)
     {
-        var locales = databaseService.GetTables().Locales.Global;
+        var locales = localeTable.Global;
         var traderId = traderBase.Id;
 
         foreach (var (localeKey, localeKvP) in locales)
@@ -416,10 +419,10 @@ public class TraderRegistrar(
     // Build trader's assort and assign to database.
     private void BuildAndAssignAssort(TraderDefinition trader)
     {
-        var traderData = databaseService.GetTables().Traders.GetValueOrDefault(trader.Id);
+        var traderData = tradersTable.GetValueOrDefault(trader.Id);
         if (traderData == null)
         {
-            logger.LogWithColor($"[TraderGen] Cannot build assort: trader '{trader.Id}' not found in database.", LogTextColor.Red);
+            logger.LogWithColor($"[TraderGen] Cannot build assort: trader '{trader.Id}' not found in database.", LogColor.Red);
             return;
         }
 
@@ -479,7 +482,7 @@ public class TraderRegistrar(
             {
                 logger.LogWithColor(
                     $"[TraderGen] Error adding assort item '{assortItem.ItemTpl}' to trader '{trader.Nickname}': {ex.Message}",
-                    LogTextColor.Red
+                    LogColor.Red
                 );
             }
         }

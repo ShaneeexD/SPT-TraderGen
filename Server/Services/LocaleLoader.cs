@@ -2,10 +2,9 @@ using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 using SPTarkov.DI.Annotations;
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Server.Core.Helpers.Server;
 using SPTarkov.Server.Core.Models.Spt.Config;
-using SPTarkov.Server.Core.Services;
-using SPTarkov.Server.Core.Servers;
+using SPTarkov.Server.Core.Models.Spt.Tables;
 using TraderGen.Models;
 
 namespace TraderGen.Services;
@@ -14,7 +13,7 @@ namespace TraderGen.Services;
 
 // Loads the active game locale file from a pack's locales/ folder into SPT's global locale tables.
 [Injectable(InjectionType.Singleton)]
-public class LocaleLoader(DatabaseService databaseService, ConfigServer configServer, ModHelper modHelper)
+public class LocaleLoader(LocaleTable localeTable, LocaleConfig localeConfig, ModHelper modHelper)
 #pragma warning restore CS0618
 {
     private static readonly Dictionary<string, string> LocaleAliases = new(StringComparer.OrdinalIgnoreCase)
@@ -52,7 +51,7 @@ public class LocaleLoader(DatabaseService databaseService, ConfigServer configSe
             if (!File.Exists(filePath)) return;
         }
 
-        var globalLocales = databaseService.GetLocales().Global;
+        var globalLocales = localeTable.Global;
         if (!globalLocales.TryGetValue(localeKey, out var localeLazy))
         {
             Console.WriteLine($"[TraderGen.LocaleLoader] WARN: language key '{localeKey}' not found in Global locales");
@@ -96,7 +95,7 @@ public class LocaleLoader(DatabaseService databaseService, ConfigServer configSe
         if (string.IsNullOrWhiteSpace(configured) ||
             string.Equals(configured, "auto", StringComparison.OrdinalIgnoreCase))
         {
-            configured = configServer.GetConfig<LocaleConfig>().GameLocale;
+            configured = localeConfig.GameLocale;
         }
 
         if (string.Equals(configured, "system", StringComparison.OrdinalIgnoreCase))

@@ -19,8 +19,8 @@ namespace TraderGen.Client.Patches
             try
             {
                 var target = AccessTools.Method(
-                    typeof(QuestBookClass),
-                    nameof(QuestBookClass.GetConditionHandlersByZone),
+                    typeof(QuestBook),
+                    "GetConditionHandlersByZone",
                     new[] { typeof(string) },
                     new[] { typeof(ConditionZone) });
 
@@ -35,7 +35,7 @@ namespace TraderGen.Client.Patches
         }
 
         public static void Postfix(
-            QuestBookClass __instance,
+            QuestBook __instance,
             string zoneId,
             ref IEnumerable<ConditionProgressChecker> __result)
         {

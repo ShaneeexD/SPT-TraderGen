@@ -4,13 +4,14 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Server.Core.Models.Spt.Tables;
+using Grid = SPTarkov.Server.Core.Models.Eft.Common.Tables.Grid;
 using TraderGen.Models;
 
 namespace TraderGen.Services;
 
 // Generates custom pocket templates and injects them into the SPT items database.
-public class CustomPocketInjector(DatabaseService databaseService)
+public class CustomPocketInjector(TemplateTable templateTable)
 {
     // Cache to avoid generating duplicate templates for the same layout.
     private readonly Dictionary<string, string> _injectedLayouts = new();
@@ -25,7 +26,7 @@ public class CustomPocketInjector(DatabaseService databaseService)
             return existingId;
         }
 
-        var items = databaseService.GetItems();
+        var items = templateTable.Items;
 
         // Clone the default pocket template as a base so special slots are preserved.
         // 557ffd194bdc2d28148b457f and 5af99e9186f7747c447120b8 have empty Slots,

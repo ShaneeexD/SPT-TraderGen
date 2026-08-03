@@ -2,9 +2,8 @@ using System.Reflection;
 using System.Text.Json;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
-using SPTarkov.Server.Core.Helpers;
-using SPTarkov.Server.Core.Models.Logging;
-using SPTarkov.Server.Core.Models.Utils;
+using SPTarkov.Server.Core.Helpers.Server;
+using SPTarkov.Common.Models.Logging;
 using TraderGen.Models;
 using TraderGen.Validation;
 using Path = System.IO.Path;
@@ -14,7 +13,7 @@ namespace TraderGen.Services;
 
 // Discovers and loads trader definition JSON files.
 
-[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 1)]
+[Injectable(TypePriority = OnLoadOrder.PostLoad + 1)]
 public class TraderLoader(ISptLogger<TraderLoader> logger, ModHelper modHelper)
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -38,7 +37,7 @@ public class TraderLoader(ISptLogger<TraderLoader> logger, ModHelper modHelper)
         if (!Directory.Exists(tradersDir))
         {
             Directory.CreateDirectory(tradersDir);
-            logger.LogWithColor("[TraderGen] Created traders/ directory. Place trader pack folders here.", LogTextColor.Yellow);
+            logger.LogWithColor("[TraderGen] Created traders/ directory. Place trader pack folders here.", LogColor.Yellow);
             return results;
         }
 
@@ -85,14 +84,14 @@ public class TraderLoader(ISptLogger<TraderLoader> logger, ModHelper modHelper)
 
             if (trader == null)
             {
-                logger.LogWithColor($"[TraderGen] Failed to parse '{fileName}': JSON deserialized to null.", LogTextColor.Red);
+                logger.LogWithColor($"[TraderGen] Failed to parse '{fileName}': JSON deserialized to null.", LogColor.Red);
                 return null;
             }
 
             // Skip disabled traders
             if (!trader.Enabled)
             {
-                logger.LogWithColor($"[TraderGen] Skipping disabled trader in '{fileName}'", LogTextColor.Yellow);
+                logger.LogWithColor($"[TraderGen] Skipping disabled trader in '{fileName}'", LogColor.Yellow);
                 return null;
             }
 
@@ -100,10 +99,10 @@ public class TraderLoader(ISptLogger<TraderLoader> logger, ModHelper modHelper)
             var errors = TraderValidator.Validate(trader, fileName);
             if (errors.Count > 0)
             {
-                logger.LogWithColor($"[TraderGen] Validation errors in '{fileName}':", LogTextColor.Red);
+                logger.LogWithColor($"[TraderGen] Validation errors in '{fileName}':", LogColor.Red);
                 foreach (var error in errors)
                 {
-                    logger.LogWithColor($"  ✗ {error}", LogTextColor.Red);
+                    logger.LogWithColor($"  ✗ {error}", LogColor.Red);
                 }
                 return null;
             }
@@ -112,20 +111,20 @@ public class TraderLoader(ISptLogger<TraderLoader> logger, ModHelper modHelper)
             var warnings = TraderValidator.GetWarnings(trader, fileName);
             foreach (var warning in warnings)
             {
-                logger.LogWithColor($"  ⚠ {warning}", LogTextColor.Yellow);
+                logger.LogWithColor($"  ⚠ {warning}", LogColor.Yellow);
             }
 
-            logger.LogWithColor($"[TraderGen] Loaded trader '{trader.Nickname}' from '{fileName}'", LogTextColor.Green);
+            logger.LogWithColor($"[TraderGen] Loaded trader '{trader.Nickname}' from '{fileName}'", LogColor.Green);
             return new LoadedTrader(trader, jsonFilePath, packFolder);
         }
         catch (JsonException ex)
         {
-            logger.LogWithColor($"[TraderGen] JSON parse error in '{fileName}': {ex.Message}", LogTextColor.Red);
+            logger.LogWithColor($"[TraderGen] JSON parse error in '{fileName}': {ex.Message}", LogColor.Red);
             return null;
         }
         catch (Exception ex)
         {
-            logger.LogWithColor($"[TraderGen] Error loading '{fileName}': {ex.Message}", LogTextColor.Red);
+            logger.LogWithColor($"[TraderGen] Error loading '{fileName}': {ex.Message}", LogColor.Red);
             return null;
         }
     }

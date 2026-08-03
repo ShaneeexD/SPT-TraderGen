@@ -120,7 +120,7 @@ namespace TraderGen.Client.Patches
                 {
                     GUIUtility.systemCopyBuffer = json;
                     ShowStatus("Build copied to clipboard!");
-                    NotificationManagerClass.DisplayMessageNotification("Build copied to clipboard!", ENotificationDurationType.Default);
+                    NotificationManager.DisplayMessageNotification("Build copied to clipboard!", ENotificationDurationType.Default);
                     Log?.LogInfo("[TraderGen] Build exported to clipboard.");
                 }
                 else
@@ -471,7 +471,7 @@ namespace TraderGen.Client.Patches
                     {
                         GUIUtility.systemCopyBuffer = json;
                         ShowStatus("Item copied to clipboard!");
-                        NotificationManagerClass.DisplayMessageNotification("Item copied to clipboard!", ENotificationDurationType.Default);
+                        NotificationManager.DisplayMessageNotification("Item copied to clipboard!", ENotificationDurationType.Default);
                         Log?.LogInfo("[TraderGen] Item exported to clipboard.");
                     }
                     else

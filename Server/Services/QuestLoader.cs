@@ -1,6 +1,5 @@
 using System.Text.Json;
-using SPTarkov.Server.Core.Models.Logging;
-using SPTarkov.Server.Core.Models.Utils;
+using SPTarkov.Common.Models.Logging;
 using TraderGen.Models;
 
 // Discovers and loads quest pack JSON files from trader pack folders.
@@ -63,7 +62,7 @@ public static class QuestLoader
             {
                 logger.LogWithColor(
                     $"[TraderGen] Failed to parse quest file '{packName}/{fileName}': JSON deserialized to null.",
-                    LogTextColor.Red);
+                    LogColor.Red);
                 return null;
             }
 
@@ -72,14 +71,14 @@ public static class QuestLoader
             {
                 logger.LogWithColor(
                     $"[TraderGen] Quest file '{packName}/{fileName}' has no quests, schemes, or zones. Skipping.",
-                    LogTextColor.Yellow);
+                    LogColor.Yellow);
                 return null;
             }
 
             logger.LogWithColor(
                 $"[TraderGen] Loaded quest pack from '{packName}/{fileName}': " +
                 $"{questPack.StoryQuests.Count} story, {questPack.RotatingQuests.Count} rotating template(s)",
-                LogTextColor.Green);
+                LogColor.Green);
 
             return new LoadedQuestPack(questPack, questFilePath, packFolder, traderId);
         }
@@ -87,14 +86,14 @@ public static class QuestLoader
         {
             logger.LogWithColor(
                 $"[TraderGen] JSON parse error in '{packName}/{fileName}': {ex.Message}",
-                LogTextColor.Red);
+                LogColor.Red);
             return null;
         }
         catch (Exception ex)
         {
             logger.LogWithColor(
                 $"[TraderGen] Error loading quest file '{packName}/{fileName}': {ex.Message}",
-                LogTextColor.Red);
+                LogColor.Red);
             return null;
         }
     }

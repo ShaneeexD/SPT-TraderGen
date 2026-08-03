@@ -1,14 +1,14 @@
 using SPTarkov.DI.Annotations;
-using SPTarkov.Server.Core.Generators.RepeatableQuestGeneration;
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Server.Core.Generators.RepeatableQuests;
+using SPTarkov.Server.Core.Helpers.Profile;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Spt.Config;
 using SPTarkov.Server.Core.Models.Spt.Repeatable;
-using SPTarkov.Server.Core.Models.Utils;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.Server.Core.Utils;
+using SPTarkov.Server.Core.Models.Spt.Tables;
 using TraderGen.Models;
 using TraderGen.Services;
 
@@ -19,7 +19,7 @@ namespace TraderGen.Generators;
 public class TraderGenQuestGenerator : IRepeatableQuestGenerator
 {
     private readonly ISptLogger<TraderGenQuestGenerator> _logger;
-    private readonly DatabaseService _databaseService;
+    private readonly LocaleTable _localeTable;
     private readonly ProfileHelper _profileHelper;
     private readonly TimeUtil _timeUtil;
 
@@ -36,17 +36,17 @@ public class TraderGenQuestGenerator : IRepeatableQuestGenerator
 
     public TraderGenQuestGenerator(
         ISptLogger<TraderGenQuestGenerator> logger,
-        DatabaseService databaseService,
+        LocaleTable localeTable,
         ProfileHelper profileHelper,
         TimeUtil timeUtil)
     {
         _logger = logger;
-        _databaseService = databaseService;
+        _localeTable = localeTable;
         _profileHelper = profileHelper;
         _timeUtil = timeUtil;
         
         Console.WriteLine("[TG-Quests] === TraderGenQuestGenerator CONSTRUCTOR called by DI ===");
-        Console.WriteLine($"[TG-Quests] Dependencies injected: logger={logger != null}, db={databaseService != null}, profile={profileHelper != null}, time={timeUtil != null}");
+        Console.WriteLine($"[TG-Quests] Dependencies injected: logger={logger != null}, localeTable={localeTable != null}, profile={profileHelper != null}, time={timeUtil != null}");
     }
 
     // Registers a trader's quest templates with the generator.
@@ -163,7 +163,7 @@ public class TraderGenQuestGenerator : IRepeatableQuestGenerator
             if (!locales.TryGetValue(questId, out var localeData))
                 return;
 
-            var localeTable = _databaseService.GetLocales().Global;
+            var localeTable = _localeTable.Global;
             var conditionLocales = RepeatableQuestLocaleStore.GetAllConditions();
 
             foreach (var (locale, lazyDict) in localeTable)

@@ -1,6 +1,5 @@
-using SPTarkov.Server.Core.Models.Logging;
-using SPTarkov.Server.Core.Models.Utils;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Common.Models.Logging;
+using SPTarkov.Server.Core.Models.Spt.Tables;
 using TraderGen.Services;
 
 namespace TraderGen.Patches;
@@ -8,22 +7,22 @@ namespace TraderGen.Patches;
 // Registers locale entries for repeatable quests into SPT's locale database.
 public static class RepeatableQuestLocaleRegistrar
 {
-    private static DatabaseService? _databaseService;
+    private static LocaleTable? _localeTable;
     private static ISptLogger<TraderGenPlugin>? _logger;
 
-    public static void RegisterLocales(DatabaseService databaseService, ISptLogger<TraderGenPlugin> logger)
+    public static void RegisterLocales(LocaleTable localeTable, ISptLogger<TraderGenPlugin> logger)
     {
-        _databaseService = databaseService;
+        _localeTable = localeTable;
         _logger = logger;
 
         var locales = RepeatableQuestLocaleStore.GetAll();
         if (locales.Count == 0)
             return;
 
-        var localeTable = databaseService.GetLocales().Global;
+        var globalLocales = localeTable.Global;
         var conditionLocales = RepeatableQuestLocaleStore.GetAllConditions();
 
-        foreach (var (locale, lazyDict) in localeTable)
+        foreach (var (locale, lazyDict) in globalLocales)
         {
             lazyDict.AddTransformer(dict =>
             {
@@ -54,15 +53,15 @@ public static class RepeatableQuestLocaleRegistrar
 
         logger.LogWithColor(
             $"[TraderGen] Registered locale entries for {locales.Count} repeatable quest(s).",
-            LogTextColor.Green);
+            LogColor.Green);
     }
 
     // Registers new locales after initial registration.
     public static void RegisterNewLocales()
     {
-        if (_databaseService == null)
+        if (_localeTable == null)
         {
-            Console.WriteLine("[TraderGen] Cannot register new locales - DatabaseService not initialized");
+            Console.WriteLine("[TraderGen] Cannot register new locales - locale table not initialized");
             return;
         }
 
@@ -72,7 +71,7 @@ public static class RepeatableQuestLocaleRegistrar
 
         try
         {
-            var localeTable = _databaseService.GetLocales().Global;
+            var localeTable = _localeTable.Global;
             var conditionLocales = RepeatableQuestLocaleStore.GetAllConditions();
             
             Console.WriteLine($"[TraderGen] RegisterNewLocales: {locales.Count} quests, {conditionLocales.Count} conditions");

@@ -1,9 +1,8 @@
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Enums.Hideout;
 using SPTarkov.Server.Core.Models.Eft.Hideout;
-using SPTarkov.Server.Core.Models.Logging;
-using SPTarkov.Server.Core.Models.Utils;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Common.Models.Logging;
+using SPTarkov.Server.Core.Models.Spt.Tables;
 using TraderGen.Models;
 
 namespace TraderGen.Services;
@@ -12,13 +11,13 @@ public static class ProductionSchemeInjector
 {
     public static void InjectSchemes(
         List<QuestLoader.LoadedQuestPack> packs,
-        DatabaseService databaseService,
+        HideoutTable hideoutTable,
         ISptLogger<TraderGenPlugin> logger)
     {
-        var recipes = databaseService.GetHideout().Production.Recipes;
+        var recipes = hideoutTable.Production.Recipes;
         if (recipes == null)
         {
-            databaseService.GetHideout().Production.Recipes = recipes = [];
+            hideoutTable.Production.Recipes = recipes = [];
         }
 
         // Map each scheme to the quests that reward it.
@@ -48,7 +47,7 @@ public static class ProductionSchemeInjector
             {
                 if (string.IsNullOrWhiteSpace(scheme.Id) || scheme.Id.Length != 24)
                 {
-                    logger.LogWithColor($"[TraderGen] Skipping invalid production scheme ID '{scheme.Id}'", LogTextColor.Yellow);
+                    logger.LogWithColor($"[TraderGen] Skipping invalid production scheme ID '{scheme.Id}'", LogColor.Yellow);
                     continue;
                 }
 
@@ -126,7 +125,7 @@ public static class ProductionSchemeInjector
 
         if (added > 0 || updated > 0)
         {
-            logger.LogWithColor($"[TraderGen] Injected {added} new and {updated} updated production scheme(s)", LogTextColor.Green);
+            logger.LogWithColor($"[TraderGen] Injected {added} new and {updated} updated production scheme(s)", LogColor.Green);
         }
     }
 }

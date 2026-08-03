@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using BepInEx.Logging;
 using EFT;
 using EFT.InventoryLogic;
+using JsonType;
 using HarmonyLib;
 
 namespace TraderGen.Client.Patches
@@ -18,24 +20,28 @@ namespace TraderGen.Client.Patches
 
         internal static void Apply(Harmony harmony)
         {
-            // Patch method_7 by name — it's a compiler-generated instance method
-            var method7 = typeof(ItemFactoryClass).GetMethod("method_7",
-                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            // Register custom pocket templates before SPT converts flat inventory data into item trees.
+            var flatItemsToTree = typeof(ItemFactory).GetMethod(
+                nameof(ItemFactory.FlatItemsToTree),
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,
+                null,
+                new[] { typeof(FlatItem[]), typeof(bool), typeof(Dictionary<string, Item>) },
+                null);
 
-            if (method7 == null)
+            if (flatItemsToTree == null)
             {
-                Log?.LogError("[TraderGen] Could not find ItemFactoryClass.method_7 — pocket persistence patch NOT applied.");
+                Log?.LogError("[TraderGen] Could not find ItemFactory.FlatItemsToTree — pocket persistence patch NOT applied.");
             }
             else
             {
-                harmony.Patch(method7,
-                    prefix: new HarmonyMethod(typeof(CustomPocketTemplatePatch), nameof(Method7Prefix)));
+                harmony.Patch(flatItemsToTree,
+                    prefix: new HarmonyMethod(typeof(CustomPocketTemplatePatch), nameof(FlatItemsToTreePrefix)));
             }
 
             // Safety net: patch CreateItem for binary deserialization path
-            var createItem = typeof(ItemFactoryClass).GetMethod(
-                nameof(ItemFactoryClass.CreateItem),
-                new[] { typeof(string), typeof(string), typeof(GClass846) });
+            var createItem = typeof(ItemFactory).GetMethod(
+                nameof(ItemFactory.CreateItem),
+                new[] { typeof(string), typeof(string), typeof(UnparsedData) });
 
             if (createItem != null)
             {
@@ -44,30 +50,39 @@ namespace TraderGen.Client.Patches
             }
         }
 
-        static void Method7Prefix(FlatItemsDataClass x, ItemFactoryClass __instance)
+        static void FlatItemsToTreePrefix(FlatItem[] flatItems, ItemFactory __instance)
         {
             try
             {
-                if (x == null) return;
-                if (x.slotId != "Pockets") return;
-                if (__instance.ItemTemplates.ContainsKey(x._tpl)) return;
+                if (flatItems == null) return;
 
-                var customTpl = (string)x._tpl;
-
-                // Clone the default pocket template and register under the custom ID
-                ItemTemplate defaultTpl;
-                if (!__instance.ItemTemplates.TryGetValue(new MongoID(DefaultPocketTpl), out defaultTpl) || defaultTpl == null)
+                foreach (var item in flatItems)
                 {
-                    return;
+                    if (item?.slotId != "Pockets") continue;
+                    RegisterCustomPocketTemplate(item._tpl, __instance);
                 }
-
-                var cloned = CloneWithNewId(defaultTpl, customTpl);
-                __instance.ItemTemplates[new MongoID(customTpl)] = cloned;
             }
             catch (Exception ex)
             {
-                Log?.LogError($"[TraderGen] Method7Prefix error: {ex.Message}");
+                Log?.LogError($"[TraderGen] FlatItemsToTreePrefix error: {ex.Message}");
             }
+        }
+
+        private static void RegisterCustomPocketTemplate(MongoID templateId, ItemFactory itemFactory)
+        {
+            if (itemFactory.ItemTemplates.ContainsKey(templateId)) return;
+
+            var customTpl = templateId.ToString();
+            if (string.IsNullOrEmpty(customTpl)) return;
+
+            // Clone the default pocket template and register under the custom ID.
+            if (!itemFactory.ItemTemplates.TryGetValue(new MongoID(DefaultPocketTpl), out var defaultTpl) || defaultTpl == null)
+            {
+                return;
+            }
+
+            var cloned = CloneWithNewId(defaultTpl, customTpl);
+            itemFactory.ItemTemplates[new MongoID(customTpl)] = cloned;
         }
 
         private static ItemTemplate CloneWithNewId(ItemTemplate source, string newId)
@@ -79,7 +94,7 @@ namespace TraderGen.Client.Patches
             return clone;
         }
 
-        static void CreateItemPrefix(ref string templateId, ItemFactoryClass __instance)
+        static void CreateItemPrefix(ref string templateId, ItemFactory __instance)
         {
             try
             {

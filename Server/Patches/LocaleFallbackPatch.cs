@@ -6,7 +6,7 @@ using System.Text.Json;
 using HarmonyLib;
 using SPTarkov.Reflection.Patching;
 using SPTarkov.Server.Core.Models.Spt.Config;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Server.Core.Services.Locales;
 using TraderGen.Models;
 
 namespace TraderGen.Patches;
