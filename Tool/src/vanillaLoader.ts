@@ -90,9 +90,17 @@ export async function loadVanillaTraderById(id: string): Promise<TraderDefinitio
     insuranceMaxReturnHour: entry.insuranceMaxReturnHour ?? 1,
     insuranceMaxStorageTime: entry.insuranceMaxStorageTime ?? 144,
     repairEnabled: entry.repairEnabled,
-    buyCategories: entry.buyCategories,
-    loyaltyLevels: entry.loyaltyLevels,
-    assort: entry.assort,
+    buyCategories: Array.isArray(entry.buyCategories) ? entry.buyCategories : [],
+    loyaltyLevels: Array.isArray(entry.loyaltyLevels) ? entry.loyaltyLevels : [],
+    assort: Array.isArray(entry.assort)
+      ? entry.assort
+          .filter(item => item && typeof item.itemTpl === 'string')
+          .map(item => ({
+            ...item,
+            barter: Array.isArray(item.barter) ? item.barter : undefined,
+            children: Array.isArray(item.children) ? item.children : undefined,
+          }))
+      : [],
   }
 }
 
@@ -149,5 +157,6 @@ export async function loadVanillaQuestPackByTraderId(traderId: string): Promise<
     storyQuests: quests,
     rotatingQuests: [],
     zones: [],
+    productionSchemes: [],
   }
 }

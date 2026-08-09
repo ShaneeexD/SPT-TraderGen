@@ -663,6 +663,21 @@ export default function App() {
     }))
   }, [])
 
+  const switchToBarter = useCallback((assortIndex: number) => {
+    setTrader(prev => ({
+      ...prev,
+      assort: prev.assort.map((item, i) =>
+        i === assortIndex
+          ? {
+              ...item,
+              price: 0,
+              barter: item.barter?.length ? item.barter : [createDefaultBarter()],
+            }
+          : item
+      ),
+    }))
+  }, [])
+
   const removeBarter = useCallback((assortIndex: number, barterIndex: number) => {
     setTrader(prev => ({
       ...prev,
@@ -987,6 +1002,7 @@ export default function App() {
             onRemoveItems={removeAssortItems}
             onUpdate={updateAssortItem}
             onAddBarter={addBarter}
+            onSwitchToBarter={switchToBarter}
             onRemoveBarter={removeBarter}
             onUpdateBarter={updateBarter}
             onAddAmmoBoxChild={addAmmoBoxChild}
@@ -1787,7 +1803,7 @@ function StatsSortModal({ open, loyaltyLevels, onClose, onApply }: {
 
 /* ===== ASSORT TAB ===== */
 function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expanded, onToggle,
-  onAdd, onAddItems, onRemove, onRemoveItems, onUpdate, onAddBarter, onRemoveBarter, onUpdateBarter,
+  onAdd, onAddItems, onRemove, onRemoveItems, onUpdate, onAddBarter, onSwitchToBarter, onRemoveBarter, onUpdateBarter,
   onAddAmmoBoxChild, onAddChild, onRemoveChild, onUpdateChild, onImportFromClipboard, errors }: {
   assort: AssortItem[]
   loyaltyLevels: LoyaltyLevel[]
@@ -1801,6 +1817,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
   onRemoveItems: (indices: number[]) => void
   onUpdate: (i: number, key: keyof AssortItem, value: unknown) => void
   onAddBarter: (i: number) => void
+  onSwitchToBarter: (i: number) => void
   onRemoveBarter: (ai: number, bi: number) => void
   onUpdateBarter: (ai: number, bi: number, key: keyof BarterRequirement, value: unknown) => void
   onAddAmmoBoxChild: (i: number, roundTpl: string, count: number) => void
@@ -1810,8 +1827,12 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
   onImportFromClipboard: () => void
   errors: ValidationError[]
 }) {
-  const itemIds = assort.map(a => a.itemTpl).filter(id => id.length === 24)
-  const barterIds = assort.flatMap(a => (a.barter || []).map(b => b.itemTpl)).filter(id => id.length === 24)
+  const itemIds = assort
+    .map(a => a.itemTpl)
+    .filter((id): id is string => typeof id === 'string' && id.length === 24)
+  const barterIds = assort
+    .flatMap(a => (Array.isArray(a.barter) ? a.barter : []).map(b => b.itemTpl))
+    .filter((id): id is string => typeof id === 'string' && id.length === 24)
   const allIds = [...new Set([...itemIds, ...barterIds])]
   const itemNames = useItemNames(allIds)
   const itemDb = useItemDb()
@@ -1844,7 +1865,8 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
       if (!searchQuery.trim()) return true
       const q = searchQuery.toLowerCase()
       const name = itemNames.get(item.itemTpl)?.toLowerCase() || ''
-      return item.itemTpl.toLowerCase().includes(q) || name.includes(q)
+      const itemTpl = typeof item.itemTpl === 'string' ? item.itemTpl : ''
+      return itemTpl.toLowerCase().includes(q) || name.includes(q)
     })
 
   const filteredAssort = searchMatchedAssort.filter(({ item }) => {
@@ -2082,7 +2104,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
         {filteredAssort.map(({ item, index }) => {
           const isExpanded = expanded.has(index)
           const itemErrors = errors.filter(e => e.field.startsWith(`assort.${index}`))
-          const isBarter = item.barter && item.barter.length > 0
+          const isBarter = Array.isArray(item.barter) && item.barter.length > 0
           const isSelected = selected.has(index)
 
           return (
@@ -2237,7 +2259,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
                       </h4>
                       <div className="flex gap-2">
                         {!isBarter && (
-                          <button onClick={() => { onAddBarter(index); onUpdate(index, 'price', 0) }}
+                          <button onClick={() => onSwitchToBarter(index)}
                             className="text-xs btn-secondary px-2 py-1">
                             Switch to Barter
                           </button>
