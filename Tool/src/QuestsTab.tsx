@@ -466,9 +466,10 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, onImportFrom
     () => [
       ...quest.objectives.map(o => o.itemTpl).filter(Boolean),
       ...(quest.rewards.items || []).map(i => i.itemTpl).filter(Boolean),
+      ...(quest.rewards.initialEquipment || []).map(i => i.itemTpl).filter(Boolean),
       ...(quest.rewards.unlockAssortItems || [])
     ] as string[],
-    [quest.objectives.map(o => o.itemTpl).join(','), quest.rewards.items?.map(i => i.itemTpl).join(','), quest.rewards.unlockAssortItems?.join(',')]
+    [quest.objectives.map(o => o.itemTpl).join(','), quest.rewards.items?.map(i => i.itemTpl).join(','), quest.rewards.initialEquipment?.map(i => i.itemTpl).join(','), quest.rewards.unlockAssortItems?.join(',')]
   )
   const itemNames = useItemNames(itemTpls)
 
@@ -706,6 +707,123 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, onImportFrom
                 onChange={e => updateRewards({ traderStanding: Number(e.target.value) })}
                 step={0.01} min={-1} max={1} />
             </Field>
+          </div>
+
+          {/* Initial Equipment - granted when the player accepts the quest */}
+          <div className="mt-3 pt-3 border-t border-tarkov-border/30">
+            <div className="flex items-center gap-3 flex-wrap mb-2">
+              <button
+                onClick={() => updateRewards({ initialEquipment: [...(quest.rewards.initialEquipment || []), { itemTpl: '', count: 1 }] })}
+                className="btn-secondary text-xs flex items-center gap-1 px-2 py-1"
+              >
+                <Plus size={12} /> Add Initial Equipment
+              </button>
+              <button
+                onClick={async () => {
+                  const imported = await onImportFromClipboard()
+                  if (imported) {
+                    updateRewards({ initialEquipment: [...(quest.rewards.initialEquipment || []), imported] })
+                  }
+                }}
+                className="btn-secondary text-xs flex items-center gap-1 px-2 py-1"
+              >
+                <ClipboardPaste size={12} /> Import from TraderGen
+              </button>
+              <span className="text-xs text-tarkov-text-dim">Items given immediately when the player accepts the quest.</span>
+              <p className="basis-full text-xs text-red-500">
+                Initial Equipment requires TraderGen 2.3.1 or later (SPT 4.1.x).
+              </p>
+              {(quest.rewards.initialEquipment || []).length > 0 && (
+                <span className="text-xs text-tarkov-text-dim">{(quest.rewards.initialEquipment || []).length} item(s)</span>
+              )}
+            </div>
+            {(quest.rewards.initialEquipment || []).map((item, idx) => (
+              <div key={idx} className="bg-tarkov-bg rounded p-2 border border-tarkov-border/50 mb-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    className="input-field text-xs font-mono flex-1"
+                    value={item.itemTpl}
+                    onChange={e => {
+                      const items = [...(quest.rewards.initialEquipment || [])]
+                      items[idx] = { ...item, itemTpl: e.target.value }
+                      updateRewards({ initialEquipment: items })
+                    }}
+                    placeholder="Item TPL ID"
+                    maxLength={24}
+                  />
+                  {item.itemTpl && itemNames.get(item.itemTpl) && (
+                    <p className="text-xs text-tarkov-accent truncate max-w-[260px]">
+                      {itemNames.get(item.itemTpl)}
+                    </p>
+                  )}
+                  <input
+                    type="number"
+                    min="1"
+                    className="input-field text-xs w-20 text-center"
+                    value={item.count}
+                    onChange={e => {
+                      const items = [...(quest.rewards.initialEquipment || [])]
+                      items[idx] = { ...item, count: parseInt(e.target.value) || 1 }
+                      updateRewards({ initialEquipment: items })
+                    }}
+                  />
+                  <button
+                    onClick={() => updateRewards({ initialEquipment: (quest.rewards.initialEquipment || []).filter((_, i) => i !== idx) })}
+                    className="text-tarkov-error hover:text-tarkov-error/80 p-1"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+                <div className="mt-2 pt-2 border-t border-tarkov-border/30">
+                  <ChildItemTree
+                    children={item.children || []}
+                    path={[]}
+                    onAdd={path => {
+                      const items = [...(quest.rewards.initialEquipment || [])]
+                      const target = items[idx]
+                      if (path.length === 0) {
+                        items[idx] = { ...target, children: [...(target.children || []), createDefaultAssortChild()] }
+                      } else {
+                        items[idx] = produceRewardChildUpdate(target, path, node => ({
+                          ...node,
+                          children: [...(node.children || []), createDefaultAssortChild()],
+                        }))
+                      }
+                      updateRewards({ initialEquipment: items })
+                    }}
+                    onRemove={path => {
+                      const items = [...(quest.rewards.initialEquipment || [])]
+                      const target = items[idx]
+                      if (path.length === 1) {
+                        items[idx] = { ...target, children: (target.children || []).filter((_, j) => j !== path[0]) }
+                      } else {
+                        const parentPath = path.slice(0, -1)
+                        const childIdx = path[path.length - 1]
+                        items[idx] = produceRewardChildUpdate(target, parentPath, node => ({
+                          ...node,
+                          children: (node.children || []).filter((_, j) => j !== childIdx),
+                        }))
+                      }
+                      updateRewards({ initialEquipment: items })
+                    }}
+                    onUpdate={(path, key, value) => {
+                      const items = [...(quest.rewards.initialEquipment || [])]
+                      const target = items[idx]
+                      if (path.length === 1) {
+                        items[idx] = {
+                          ...target,
+                          children: (target.children || []).map((child, j) => j === path[0] ? { ...child, [key]: value } : child),
+                        }
+                      } else {
+                        items[idx] = produceRewardChildUpdate(target, path, node => ({ ...node, [key]: value }))
+                      }
+                      updateRewards({ initialEquipment: items })
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Item Rewards - compact inline */}

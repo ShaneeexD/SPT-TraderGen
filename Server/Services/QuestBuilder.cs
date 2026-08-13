@@ -302,7 +302,7 @@ public static class QuestBuilder
             },
             ["rewards"] = new JsonObject
             {
-                ["Started"] = new JsonArray(),
+                ["Started"] = BuildInitialEquipmentRewards(quest.Rewards.InitialEquipment),
                 ["Success"] = successRewards,
                 ["Fail"] = new JsonArray(),
             },
@@ -902,6 +902,50 @@ public static class QuestBuilder
     }
 
     // Reward builder
+
+    private static JsonArray BuildInitialEquipmentRewards(List<ItemReward> items)
+    {
+        var result = new JsonArray();
+        var index = 0;
+
+        foreach (var item in items)
+        {
+            if (string.IsNullOrWhiteSpace(item.ItemTpl))
+                continue;
+
+            var itemId = GenerateId();
+            var rewardItems = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["_id"] = itemId,
+                    ["_tpl"] = item.ItemTpl,
+                    ["upd"] = new JsonObject
+                    {
+                        ["StackObjectsCount"] = item.Count,
+                    },
+                },
+            };
+
+            if (item.Children is { Count: > 0 })
+                FlattenRewardChildren(item.Children, itemId, rewardItems);
+
+            result.Add(new JsonObject
+            {
+                ["availableInGameEditions"] = new JsonArray(),
+                ["findInRaid"] = false,
+                ["id"] = GenerateId(),
+                ["index"] = index++,
+                ["items"] = rewardItems,
+                ["target"] = itemId,
+                ["type"] = "Item",
+                ["value"] = item.Count.ToString(),
+                ["unknown"] = false,
+            });
+        }
+
+        return result;
+    }
 
     private static JsonArray BuildRewards(QuestRewards rewards, string traderId, Dictionary<string, ProductionSchemeDefinition> schemes)
     {

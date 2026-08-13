@@ -328,6 +328,19 @@ public static class QuestValidator
             }
         }
 
+        for (var i = 0; i < rewards.InitialEquipment.Count; i++)
+        {
+            var item = rewards.InitialEquipment[i];
+            if (string.IsNullOrWhiteSpace(item.ItemTpl))
+                errors.Add($"{prefix}.initialEquipment[{i}]: 'itemTpl' is required.");
+            else if (item.ItemTpl.Length != 24 || !IsHexString(item.ItemTpl))
+                errors.Add($"{prefix}.initialEquipment[{i}]: 'itemTpl' must be a 24-character hex string. Got: '{item.ItemTpl}'");
+            if (item.Count < 1)
+                errors.Add($"{prefix}.initialEquipment[{i}]: 'count' must be >= 1.");
+            if (item.Children != null)
+                ValidateRewardChildren(item.Children, $"{prefix}.initialEquipment[{i}]", errors);
+        }
+
         if (rewards.TraderStanding < 0)
             errors.Add($"{prefix}: 'traderStanding' cannot be negative.");
 

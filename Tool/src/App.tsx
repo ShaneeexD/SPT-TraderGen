@@ -109,6 +109,7 @@ export default function App() {
   const [showExportSuccess, setShowExportSuccess] = useState(false)
   const [exportSuccessMessage, setExportSuccessMessage] = useState('')
   const [showExportDropdown, setShowExportDropdown] = useState(false)
+  const [showZipVersionModal, setShowZipVersionModal] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [vanillaList, setVanillaList] = useState<{ id: string; nickname: string }[]>([])
   const [showVanillaDropdown, setShowVanillaDropdown] = useState(false)
@@ -153,7 +154,7 @@ export default function App() {
     return traderErrs.length === 0 && qErrs.length === 0
   }, [trader, questPack])
 
-  const handleExport = useCallback(async () => {
+  const handleExport = useCallback(async (sptRoot: 'SPT' | 'SPT_Runtime') => {
     if (!validate()) {
       setActiveTab('general')
       return
@@ -161,7 +162,7 @@ export default function App() {
     const json = buildExportJson(trader)
     const jsonStr = JSON.stringify(json, null, 2)
     const packName = trader.packName.trim() || 'MyTraderPack'
-    const basePath = `SPT/user/mods/TraderGen/traders/${packName}`
+    const basePath = `${sptRoot}/user/mods/TraderGen/traders/${packName}`
 
     const zip = new JSZip()
     zip.file(`${basePath}/trader.json`, jsonStr)
@@ -208,7 +209,7 @@ export default function App() {
     setExportSuccessMessage('Trader pack exported as ZIP!')
     setShowExportSuccess(true)
     setTimeout(() => setShowExportSuccess(false), 3000)
-  }, [trader, validate])
+  }, [trader, questPack, validate])
 
   const handleExportJson = useCallback(() => {
     if (!validate()) {
@@ -891,7 +892,7 @@ export default function App() {
             {showExportDropdown && (
               <div className="absolute right-0 mt-2 w-52 bg-tarkov-surface border border-tarkov-border rounded-lg shadow-xl z-50 overflow-hidden">
                 <button
-                  onClick={() => { setShowExportDropdown(false); handleExport() }}
+                  onClick={() => { setShowExportDropdown(false); setShowZipVersionModal(true) }}
                   className="w-full text-left px-4 py-2.5 text-sm text-tarkov-text hover:bg-tarkov-accent/10 hover:text-tarkov-accent transition-colors border-b border-tarkov-border flex items-center gap-2"
                 >
                   <Package size={14} /> Export as ZIP
@@ -907,6 +908,42 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {showZipVersionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md bg-tarkov-surface border border-tarkov-border rounded-lg shadow-2xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-tarkov-accent">Choose SPT version</h2>
+              <button
+                onClick={() => setShowZipVersionModal(false)}
+                className="text-tarkov-text-dim hover:text-tarkov-text p-1"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-sm text-tarkov-text-dim mb-4">
+              Select the folder layout your SPT installation uses.
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={() => { setShowZipVersionModal(false); handleExport('SPT') }}
+                className="w-full text-left btn-secondary p-3"
+              >
+                <span className="block font-medium text-tarkov-text">SPT 4.0.13</span>
+                <span className="block text-xs text-tarkov-text-dim mt-1">Uses the SPT/ root folder.</span>
+              </button>
+              <button
+                onClick={() => { setShowZipVersionModal(false); handleExport('SPT_Runtime') }}
+                className="w-full text-left btn-secondary p-3"
+              >
+                <span className="block font-medium text-tarkov-text">SPT 4.1.x</span>
+                <span className="block text-xs text-tarkov-text-dim mt-1">Uses the SPT_Runtime/ root folder.</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Success toast */}
       {showExportSuccess && (

@@ -283,6 +283,10 @@ public class QuestRewards
     [JsonPropertyName("items")]
     public List<ItemReward> Items { get; set; } = [];
 
+    // Items given immediately when the player accepts the quest.
+    [JsonPropertyName("initialEquipment")]
+    public List<ItemReward> InitialEquipment { get; set; } = [];
+
     // Standing increase with the quest's trader.
     [JsonPropertyName("traderStanding")]
     public double TraderStanding { get; set; } = 0;

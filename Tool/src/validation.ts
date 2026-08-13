@@ -570,6 +570,13 @@ function buildRewardsJson(rewards: QuestPackDefinition['storyQuests'][0]['reward
     r.money = { currency: rewards.money.currency, amount: rewards.money.amount }
   }
   if (rewards.traderStanding !== 0) r.traderStanding = rewards.traderStanding
+  if (rewards.initialEquipment && rewards.initialEquipment.length > 0) {
+    r.initialEquipment = rewards.initialEquipment.map(item => {
+      const out: Record<string, unknown> = { itemTpl: item.itemTpl, count: item.count }
+      if (item.children && item.children.length > 0) out.children = item.children
+      return out
+    })
+  }
   if (rewards.items && rewards.items.length > 0) {
     r.items = rewards.items.map(item => {
       const out: Record<string, unknown> = { itemTpl: item.itemTpl, count: item.count }

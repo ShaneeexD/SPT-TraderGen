@@ -169,11 +169,12 @@ function dedupeObjectives(objectives) {
   return Array.from(seen.values())
 }
 
-function convertRewards(rewards) {
+function convertRewards(rewards, startedRewards = []) {
   let xp = 0
   let traderStanding = 0
   let money = undefined
   const items = []
+  const initialEquipment = []
   const unlockAssortItems = []
   const recipes = []
   const skills = []
@@ -218,9 +219,20 @@ function convertRewards(rewards) {
     }
   }
 
+  for (const r of startedRewards || []) {
+    if (r.type !== 'Item') continue
+    const root = r.items?.[0]
+    if (!root?._tpl || CURRENCY_TPLS[root._tpl]) continue
+    initialEquipment.push({
+      itemTpl: root._tpl,
+      count: r.value || root.upd?.StackObjectsCount || 1,
+    })
+  }
+
   const result = { xp, traderStanding }
   if (money) result.money = money
   if (items.length > 0) result.items = items
+  if (initialEquipment.length > 0) result.initialEquipment = initialEquipment
   if (unlockAssortItems.length > 0) result.unlockAssortItems = unlockAssortItems
   if (recipes.length > 0) result.recipes = recipes
   if (skills.length > 0) result.skills = skills
@@ -240,7 +252,7 @@ function convertQuest(quest, locales) {
   }
 
   const objectives = dedupeObjectives(rawObjectives)
-  const rewards = convertRewards(quest.rewards?.Success)
+  const rewards = convertRewards(quest.rewards?.Success, quest.rewards?.Started)
 
   return {
     id: quest._id,

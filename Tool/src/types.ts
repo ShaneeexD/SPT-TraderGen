@@ -167,6 +167,7 @@ export interface QuestRewards {
   money?: MoneyReward
   traderStanding: number
   items?: RewardItem[]
+  initialEquipment?: RewardItem[]
   unlockAssortItems?: string[]
   recipes?: string[]
   stashRows?: number

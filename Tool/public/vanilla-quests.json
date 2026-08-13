@@ -231,6 +231,12 @@
           "itemTpl": "5448be9a4bdc2dfd2f8b456a",
           "count": 5
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "6217726288ed9f0845317459",
+          "count": 1
+        }
       ]
     }
   },
@@ -335,6 +341,12 @@
         {
           "itemTpl": "5d1b371186f774253763a656",
           "count": 2
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5991b51486f77447b112d44f",
+          "count": 4
         }
       ],
       "unlockAssortItems": [
@@ -1448,6 +1460,12 @@
           "itemTpl": "5aa7e373e5b5b000137b76f0",
           "count": 2
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "66d9f1abb16d9aacf5068468",
+          "count": 1
+        }
       ]
     }
   },
@@ -1523,6 +1541,12 @@
         {
           "itemTpl": "618a431df1eb8e24b8741deb",
           "count": 3
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5580223e4bdc2d1c128b457f",
+          "count": 1
         }
       ]
     }
@@ -1618,6 +1642,12 @@
         {
           "itemTpl": "5d0378d486f77420421a5ff4",
           "count": 2
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "6655e35b6bc645cb7b059912",
+          "count": 1
         }
       ]
     }
@@ -1731,6 +1761,12 @@
         {
           "itemTpl": "6489854673c462723909a14e",
           "count": 5
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "67614b3ab8c060ebb204b106",
+          "count": 1
         }
       ]
     }
@@ -2281,6 +2317,16 @@
           "itemTpl": "657025dabfc87b3a34093256",
           "count": 6
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "66d9f8744827a77e870ecaf1",
+          "count": 1
+        },
+        {
+          "itemTpl": "66d9f7256916142b3b02276e",
+          "count": 1
+        }
       ]
     }
   },
@@ -2638,6 +2684,16 @@
           "itemTpl": "65702561cfc010a0f5006a28",
           "count": 3
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "619cbfeb6b8a1b37a54eebfa",
+          "count": 2
+        },
+        {
+          "itemTpl": "5d0375ff86f774186372f685",
+          "count": 2
+        }
       ]
     }
   },
@@ -2725,6 +2781,12 @@
           "count": 2
         }
       ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5aafa857e5b5b00018480968",
+          "count": 1
+        }
+      ],
       "recipes": [
         "68a9695194f6582e591405e1"
       ]
@@ -2779,6 +2841,12 @@
           "count": 3
         }
       ],
+      "initialEquipment": [
+        {
+          "itemTpl": "62e14904c2699c0ec93adc47",
+          "count": 1
+        }
+      ],
       "unlockAssortItems": [
         "5a26ac0ec4a28200741e1e18"
       ]
@@ -2828,6 +2896,12 @@
           "itemTpl": "64898602f09d032aa9399d56",
           "count": 8
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "6499849fc93611967b034949",
+          "count": 1
+        }
       ]
     }
   },
@@ -2874,6 +2948,12 @@
         {
           "itemTpl": "641074a07fd350b98c0b3f96",
           "count": 2
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "65268d8ecb944ff1e90ea385",
+          "count": 1
         }
       ]
     }
@@ -2923,6 +3003,12 @@
           "itemTpl": "6489854673c462723909a14e",
           "count": 6
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "6680304edadb7aa61d00cef0",
+          "count": 1
+        }
       ]
     }
   },
@@ -2961,6 +3047,12 @@
         {
           "itemTpl": "5c0e625a86f7742d77340f62",
           "count": 2
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "674d6121c09f69dfb201a888",
+          "count": 1
         }
       ]
     }
@@ -3170,6 +3262,20 @@
           "itemTpl": "65702554bfc87b3a34093247",
           "count": 3
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5447a9cd4bdc2dbd208b4567",
+          "count": 1
+        },
+        {
+          "itemTpl": "545cdb794bdc2d3a198b456a",
+          "count": 1
+        },
+        {
+          "itemTpl": "5645bc214bdc2d363b8b4571",
+          "count": 1
+        }
       ]
     }
   },
@@ -3207,6 +3313,12 @@
         {
           "itemTpl": "5aafbde786f774389d0cbc0f",
           "count": 2
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5b3b713c5acfc4330140bd8d",
+          "count": 1
         }
       ]
     }
@@ -3307,6 +3419,20 @@
         },
         {
           "itemTpl": "5ac66d725acfc43b321d4b60",
+          "count": 1
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5a7c4850e899ef00150be885",
+          "count": 1
+        },
+        {
+          "itemTpl": "5b432b965acfc47a8774094e",
+          "count": 1
+        },
+        {
+          "itemTpl": "56e0598dd2720bb5668b45a6",
           "count": 1
         }
       ]
@@ -3840,6 +3966,12 @@
           "itemTpl": "5c0e530286f7747fa1419862",
           "count": 3
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5991b51486f77447b112d44f",
+          "count": 7
+        }
       ]
     }
   },
@@ -4076,6 +4208,12 @@
       "items": [
         {
           "itemTpl": "5aafbcd986f7745e590fff23",
+          "count": 1
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5c94bbff86f7747ee735c08f",
           "count": 1
         }
       ]
@@ -5456,6 +5594,12 @@
           "itemTpl": "5c0e534186f7747fa1419867",
           "count": 5
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5c94bbff86f7747ee735c08f",
+          "count": 1
+        }
       ]
     }
   },
@@ -5496,6 +5640,12 @@
         {
           "itemTpl": "5c0e531d86f7747fa23f4d42",
           "count": 3
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "6707d0804e617ec94f0e562f",
+          "count": 6
         }
       ]
     }
@@ -7184,6 +7334,12 @@
           "count": 2
         }
       ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5780cfa52459777dfb276eb1",
+          "count": 1
+        }
+      ],
       "unlockAssortItems": [
         "5a966f51a2750c00156aacf6"
       ]
@@ -7259,6 +7415,12 @@
       "items": [
         {
           "itemTpl": "5e2af55f86f7746d4159f07c",
+          "count": 1
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5991b51486f77447b112d44f",
           "count": 1
         }
       ]
@@ -7357,6 +7519,12 @@
         {
           "itemTpl": "5d235b4d86f7742e017bc88a",
           "count": 2
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5734758f24597738025ee253",
+          "count": 4
         }
       ]
     }
@@ -7589,6 +7757,12 @@
         "currency": "RUB",
         "amount": 130000
       },
+      "initialEquipment": [
+        {
+          "itemTpl": "66ffa9b66e19cc902401c5e8",
+          "count": 1
+        }
+      ],
       "unlockAssortItems": [
         "67124dcfa3541f2a1f0e788b",
         "670fd23798663bc4b10e911a",
@@ -7647,7 +7821,13 @@
       "money": {
         "currency": "RUB",
         "amount": 35000
-      }
+      },
+      "initialEquipment": [
+        {
+          "itemTpl": "675a0288c3102563bd01c9c3",
+          "count": 3
+        }
+      ]
     }
   },
   {
@@ -7986,6 +8166,12 @@
           "count": 2
         }
       ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5913611c86f77479e0084092",
+          "count": 1
+        }
+      ],
       "unlockAssortItems": [
         "584984812459776a704a82a6"
       ]
@@ -8105,6 +8291,20 @@
         },
         {
           "itemTpl": "57347ca924597744596b4e71",
+          "count": 2
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5a43943586f77416ad2f06e2",
+          "count": 1
+        },
+        {
+          "itemTpl": "5a43957686f7742a2c2f11b0",
+          "count": 1
+        },
+        {
+          "itemTpl": "5c1a1e3f2e221602b66cc4c2",
           "count": 2
         }
       ]
@@ -9013,6 +9213,12 @@
           "itemTpl": "6570259bc5d7d4cb4d07857f",
           "count": 3
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5991b51486f77447b112d44f",
+          "count": 3
+        }
       ]
     }
   },
@@ -9049,6 +9255,12 @@
         {
           "itemTpl": "657024e3c5d7d4cb4d07856a",
           "count": 3
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5991b51486f77447b112d44f",
+          "count": 6
         }
       ]
     }
@@ -9706,6 +9918,12 @@
           "itemTpl": "6570240a1419851aef03e6f7",
           "count": 3
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5b4391a586f7745321235ab2",
+          "count": 3
+        }
       ]
     }
   },
@@ -9774,6 +9992,12 @@
         {
           "itemTpl": "57505f6224597709a92585a9",
           "count": 4
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "59fafb5d86f774067a6f2084",
+          "count": 2
         }
       ]
     }
@@ -10412,6 +10636,16 @@
           "count": 1
         }
       ],
+      "initialEquipment": [
+        {
+          "itemTpl": "55801eed4bdc2d89578b4588",
+          "count": 1
+        },
+        {
+          "itemTpl": "544fb5454bdc2df8738b456a",
+          "count": 1
+        }
+      ],
       "unlockAssortItems": [
         "5b3116595acfc40019476364",
         "5aafa857e5b5b00018480968",
@@ -10912,6 +11146,24 @@
         {
           "itemTpl": "5c0558060db834001b735271",
           "count": 2
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5aa7d03ae5b5b00016327db5",
+          "count": 1
+        },
+        {
+          "itemTpl": "5ab8e4ed86f7742d8e50c7fa",
+          "count": 1
+        },
+        {
+          "itemTpl": "5447a9cd4bdc2dbd208b4567",
+          "count": 1
+        },
+        {
+          "itemTpl": "5aaa5dfee5b5b000140293d3",
+          "count": 3
         }
       ],
       "unlockAssortItems": [
@@ -11895,6 +12147,32 @@
           "count": 15000
         }
       ],
+      "initialEquipment": [
+        {
+          "itemTpl": "60a283193cb70855c43a381d",
+          "count": 2
+        },
+        {
+          "itemTpl": "5f60c74e3b85f6263c145586",
+          "count": 2
+        },
+        {
+          "itemTpl": "5f60c85b58eff926626a60f7",
+          "count": 2
+        },
+        {
+          "itemTpl": "5bb2475ed4351e00853264e3",
+          "count": 2
+        },
+        {
+          "itemTpl": "5b44c8ea86f7742d1627baf1",
+          "count": 2
+        },
+        {
+          "itemTpl": "6034d2d697633951dc245ea6",
+          "count": 2
+        }
+      ],
       "unlockAssortItems": [
         "61962b617c6c7b169525f168",
         "601949593ae8f707c4608daa",
@@ -12364,6 +12642,12 @@
           "count": 1000
         }
       ],
+      "initialEquipment": [
+        {
+          "itemTpl": "63a399193901f439517cafb6",
+          "count": 1
+        }
+      ],
       "recipes": [
         "68a9695194f6582e591413fc"
       ]
@@ -12678,6 +12962,12 @@
           "itemTpl": "5a5f1ce64f39f90b401987bc",
           "count": 2
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "62178c4d4ecf221597654e3d",
+          "count": 1
+        }
       ]
     }
   },
@@ -12886,6 +13176,12 @@
         {
           "itemTpl": "5d1c774f86f7746d6620f8db",
           "count": 2
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5991b51486f77447b112d44f",
+          "count": 3
         }
       ]
     }
@@ -14079,6 +14375,12 @@
           "itemTpl": "5c46fbd72e2216398b5a8c9c",
           "count": 1
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "6866665cdf54e1190902df55",
+          "count": 1
+        }
       ]
     }
   },
@@ -14102,7 +14404,13 @@
       "money": {
         "currency": "RUB",
         "amount": 2300
-      }
+      },
+      "initialEquipment": [
+        {
+          "itemTpl": "68406efe068a2d99940c1ce3",
+          "count": 1
+        }
+      ]
     }
   },
   {
@@ -14125,7 +14433,13 @@
       "money": {
         "currency": "RUB",
         "amount": 2500
-      }
+      },
+      "initialEquipment": [
+        {
+          "itemTpl": "68406efe068a2d99940c1ce3",
+          "count": 1
+        }
+      ]
     }
   },
   {
@@ -14148,7 +14462,13 @@
       "money": {
         "currency": "RUB",
         "amount": 10000
-      }
+      },
+      "initialEquipment": [
+        {
+          "itemTpl": "68750378555049ec270cdab7",
+          "count": 1
+        }
+      ]
     }
   },
   {
@@ -14228,7 +14548,33 @@
       "money": {
         "currency": "EUR",
         "amount": 1500
-      }
+      },
+      "initialEquipment": [
+        {
+          "itemTpl": "65702652cfc010a0f5006a53",
+          "count": 2
+        },
+        {
+          "itemTpl": "6570900858b315e8b70a8a98",
+          "count": 2
+        },
+        {
+          "itemTpl": "64ace9f9c4eda9354b0226aa",
+          "count": 7
+        },
+        {
+          "itemTpl": "648984b8d5b4df6140000a1a",
+          "count": 3
+        },
+        {
+          "itemTpl": "648987d673c462723909a151",
+          "count": 5
+        },
+        {
+          "itemTpl": "6489854673c462723909a14e",
+          "count": 5
+        }
+      ]
     }
   },
   {
@@ -14725,6 +15071,12 @@
         {
           "itemTpl": "5d1b392c86f77425243e98fe",
           "count": 2
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "57dc2fa62459775949412633",
+          "count": 1
         }
       ],
       "unlockAssortItems": [
@@ -15414,6 +15766,12 @@
           "itemTpl": "5d0378d486f77420421a5ff4",
           "count": 3
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "679b9819a2f2dd4da9023512",
+          "count": 1
+        }
       ]
     }
   },
@@ -15652,7 +16010,13 @@
     ],
     "rewards": {
       "xp": 31300,
-      "traderStanding": 0.02
+      "traderStanding": 0.02,
+      "initialEquipment": [
+        {
+          "itemTpl": "62e910aaf957f2915e0a5e36",
+          "count": 1
+        }
+      ]
     }
   },
   {
@@ -15927,7 +16291,13 @@
     "objectives": [],
     "rewards": {
       "xp": 19100,
-      "traderStanding": 0.01
+      "traderStanding": 0.01,
+      "initialEquipment": [
+        {
+          "itemTpl": "63a0b2eabea67a6d93009e52",
+          "count": 4
+        }
+      ]
     }
   },
   {
@@ -16516,6 +16886,12 @@
           "itemTpl": "6570243bbfc87b3a3409321f",
           "count": 2
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5ac78a9b86f7741cca0bbd8d",
+          "count": 3
+        }
       ]
     }
   },
@@ -17101,6 +17477,12 @@
           "itemTpl": "5b44d0de86f774503d30cba8",
           "count": 1
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "588892092459774ac91d4b11",
+          "count": 1
+        }
       ]
     }
   },
@@ -17196,6 +17578,12 @@
         {
           "itemTpl": "628d0618d1ba6e4fa07ce5a4",
           "count": 3
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "628baf0b967de16aab5a4f36",
+          "count": 1
         }
       ]
     }
@@ -17680,6 +18068,16 @@
         {
           "itemTpl": "5ca2113f86f7740b2547e1d2",
           "count": 2
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "64be7095047e826eae02b0c1",
+          "count": 6
+        },
+        {
+          "itemTpl": "656fad8c498d1b7e3e071da0",
+          "count": 6
         }
       ],
       "unlockAssortItems": [
@@ -18291,6 +18689,12 @@
         {
           "itemTpl": "628dc750b910320f4c27a732",
           "count": 2
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5d1b376e86f774252519444e",
+          "count": 1
         }
       ]
     }
@@ -19359,6 +19763,12 @@
           "itemTpl": "62389aaba63f32501b1b444f",
           "count": 3
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "6217726288ed9f0845317459",
+          "count": 2
+        }
       ]
     }
   },
@@ -19810,6 +20220,12 @@
         {
           "itemTpl": "676bf44c5539167c3603e869",
           "count": 3
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "67b49e7335dec48e3e05e057",
+          "count": 10
         }
       ]
     }
@@ -24236,6 +24652,12 @@
           "itemTpl": "6570aead4d84f81fd002a033",
           "count": 1
         }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "62e7c4fba689e8c9c50dfc38",
+          "count": 2
+        }
       ]
     }
   },
@@ -24269,6 +24691,12 @@
         },
         {
           "itemTpl": "6570aead4d84f81fd002a033",
+          "count": 2
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5648a7494bdc2d9d488b4583",
           "count": 2
         }
       ]
@@ -24465,6 +24893,12 @@
         {
           "itemTpl": "657024e3c5d7d4cb4d07856a",
           "count": 3
+        }
+      ],
+      "initialEquipment": [
+        {
+          "itemTpl": "5b4391a586f7745321235ab2",
+          "count": 4
         }
       ]
     }
