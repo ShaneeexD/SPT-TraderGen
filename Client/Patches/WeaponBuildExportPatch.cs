@@ -38,7 +38,7 @@ namespace TraderGen.Client.Patches
             {
                 try
                 {
-                    var saveAsButtonField = typeof(EditBuildScreen).GetField("_saveAsBuildButton", BindingFlags.Instance | BindingFlags.NonPublic);
+                    var saveAsButtonField = typeof(EditBuildScreen).GetField("_saveAsBuildButton", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                     var sourceButton = saveAsButtonField?.GetValue(__instance) as Button;
 
                     if (sourceButton == null)
@@ -364,12 +364,14 @@ namespace TraderGen.Client.Patches
         internal static class ItemUiContextShowContextMenuPatch
         {
             [HarmonyPostfix]
-            static void Postfix(ItemUiContext __instance)
+            static void Postfix(ItemUiContext __instance, ItemContext itemContext)
             {
                 try
                 {
+                    _contextMenuItem = itemContext?.Item;
                     if (Plugin.EnableExportButton != null && !Plugin.EnableExportButton.Value)
                     {
+                        Log?.LogDebug("[TraderGen] Stash export button is disabled in the TraderGen config.");
                         return;
                     }
 
@@ -416,10 +418,6 @@ namespace TraderGen.Client.Patches
                         var existingButton = existing.GetComponent<SimpleContextMenuButton>();
                         if (existingButton != null)
                         {
-                            var buttonField = typeof(SimpleContextMenuButton).GetField("_button", BindingFlags.Instance | BindingFlags.NonPublic);
-                            var btn = buttonField?.GetValue(existingButton) as Button;
-                            btn?.onClick.RemoveAllListeners();
-
                             existingButton.Show("EXPORT TO TG", "EXPORT TO TG", null, onClick, null, false, true);
                             existing.SetAsLastSibling();
                             Log?.LogDebug("[TraderGen] ShowContextMenu postfix: updated existing button.");
@@ -435,20 +433,19 @@ namespace TraderGen.Client.Patches
                         return;
                     }
 
-                    var templateGo = template.GetType().GetProperty("gameObject", BindingFlags.Instance | BindingFlags.Public)?.GetValue(template) as GameObject;
-                    if (templateGo == null)
-                    {
-                        Log?.LogWarning("[TraderGen] ShowContextMenu postfix: could not get template GameObject.");
-                        return;
-                    }
+                    var created = container.CreateContextButton(
+                        "TraderGen.Export",
+                        "EXPORT TO TG",
+                        template,
+                        buttonsContainer as RectTransform,
+                        null,
+                        onClick,
+                        null,
+                        false,
+                        true);
+                    created.Transform.name = "ExportToTraderGen";
 
-                    var clonedGo = UnityEngine.Object.Instantiate(templateGo, buttonsContainer);
-                    clonedGo.name = "ExportToTraderGen";
-                    var cloned = clonedGo.GetComponent<SimpleContextMenuButton>();
-                    cloned?.Show("EXPORT TO TG", "EXPORT TO TG", null, onClick, null, false, true);
-                    clonedGo.transform.SetAsLastSibling();
-
-                    Log?.LogInfo("[TraderGen] Injected context menu export button via ShowContextMenu postfix.");
+                    Log?.LogInfo("[TraderGen] Injected context menu export button via SPT 4.1 API.");
                 }
                 catch (Exception ex)
                 {
