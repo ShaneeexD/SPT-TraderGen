@@ -39,6 +39,44 @@ function produceRewardChildUpdate(
   return { ...item, children: newChildren }
 }
 
+function CollapsibleChildItemTree({
+  children,
+  onAdd,
+  onRemove,
+  onUpdate,
+}: {
+  children: AssortChildItem[]
+  onAdd: (path: number[]) => void
+  onRemove: (path: number[]) => void
+  onUpdate: (path: number[], key: keyof AssortChildItem, value: unknown) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const childCount = children.length
+
+  return (
+    <div>
+      <button
+        onClick={() => setExpanded(value => !value)}
+        className="text-xs text-tarkov-text-dim hover:text-tarkov-accent flex items-center gap-1"
+      >
+        <ChevronDown size={12} className={expanded ? '' : '-rotate-90'} />
+        Child Items ({childCount})
+      </button>
+      {expanded && (
+        <div className="mt-2">
+          <ChildItemTree
+            children={children}
+            path={[]}
+            onAdd={onAdd}
+            onRemove={onRemove}
+            onUpdate={onUpdate}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Extract names are auto-generated from SPT allExtracts.json into src/extracts.ts.
 // Shown in the Required Extract dropdown for survive/extract objectives.
 
@@ -776,9 +814,8 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, onImportFrom
                   </button>
                 </div>
                 <div className="mt-2 pt-2 border-t border-tarkov-border/30">
-                  <ChildItemTree
+                  <CollapsibleChildItemTree
                     children={item.children || []}
-                    path={[]}
                     onAdd={path => {
                       const items = [...(quest.rewards.initialEquipment || [])]
                       const target = items[idx]
@@ -913,7 +950,7 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, onImportFrom
 
                   {/* Child attachments for this reward item */}
                   <div className="mt-2 pt-2 border-t border-tarkov-border/30">
-                    <ChildItemTree
+                    <CollapsibleChildItemTree
                       children={item.children || []}
                       path={[]}
                       onAdd={(path) => {
