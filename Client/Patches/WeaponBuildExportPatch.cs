@@ -382,12 +382,6 @@ namespace TraderGen.Client.Patches
                         return;
                     }
 
-                    if (!ShouldExportItem(item))
-                    {
-                        Log?.LogDebug($"[TraderGen] ShowContextMenu postfix: item type '{item.GetType().Name}' rejected.");
-                        return;
-                    }
-
                     var contextMenu = __instance.ContextMenu;
                     if (contextMenu == null)
                     {
@@ -395,7 +389,7 @@ namespace TraderGen.Client.Patches
                         return;
                     }
 
-                    var ibcField = typeof(SimpleContextMenu).GetField("_interactionButtonsContainer", BindingFlags.Instance | BindingFlags.NonPublic);
+                    var ibcField = typeof(SimpleContextMenu).GetField("_interactionButtonsContainer", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                     var container = ibcField?.GetValue(contextMenu) as InteractionButtonsContainer;
                     if (container == null)
                     {
@@ -403,7 +397,7 @@ namespace TraderGen.Client.Patches
                         return;
                     }
 
-                    var buttonsContainerField = typeof(InteractionButtonsContainer).GetField("_buttonsContainer", BindingFlags.Instance | BindingFlags.NonPublic);
+                    var buttonsContainerField = typeof(InteractionButtonsContainer).GetField("_buttonsContainer", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                     var buttonsContainer = buttonsContainerField?.GetValue(container) as Transform;
                     if (buttonsContainer == null)
                     {
@@ -418,6 +412,7 @@ namespace TraderGen.Client.Patches
                         var existingButton = existing.GetComponent<SimpleContextMenuButton>();
                         if (existingButton != null)
                         {
+                            existingButton._button?.onClick.RemoveAllListeners();
                             existingButton.Show("EXPORT TO TG", "EXPORT TO TG", null, onClick, null, false, true);
                             existing.SetAsLastSibling();
                             Log?.LogDebug("[TraderGen] ShowContextMenu postfix: updated existing button.");
@@ -425,7 +420,7 @@ namespace TraderGen.Client.Patches
                         }
                     }
 
-                    var templateField = typeof(InteractionButtonsContainer).GetField("_buttonTemplate", BindingFlags.Instance | BindingFlags.NonPublic);
+                    var templateField = typeof(InteractionButtonsContainer).GetField("_buttonTemplate", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                     var template = templateField?.GetValue(container) as SimpleContextMenuButton;
                     if (template == null)
                     {
@@ -451,12 +446,6 @@ namespace TraderGen.Client.Patches
                 {
                     Log?.LogError($"[TraderGen] ShowContextMenu postfix failed: {ex}");
                 }
-            }
-
-            static bool ShouldExportItem(Item item)
-            {
-                var typeName = item.GetType().Name.ToLowerInvariant();
-                return typeName.Contains("armor") || typeName.Contains("vest") || typeName.Contains("rig") || typeName.Contains("backpack") || typeName.Contains("weapon");
             }
 
             static void ExportItem(Item item)
