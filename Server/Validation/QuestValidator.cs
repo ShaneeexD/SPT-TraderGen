@@ -161,7 +161,6 @@ public static class QuestValidator
             if (quest.Requirements.PreviousQuest.Length != 24 || !IsHexString(quest.Requirements.PreviousQuest))
                 errors.Add($"{prefix}: requirements.previousQuest must be a 24-character hex string. Got: '{quest.Requirements.PreviousQuest}'");
         }
-
         // Objectives
         if (quest.Objectives.Count == 0)
         {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useRef, useLayoutEffect, useEffect } from 'react'
 import {
   Plus, Trash2, ChevronDown, ChevronUp, RefreshCw, Target, Crosshair,
   Clock, MapPin, HelpCircle, AlertCircle, Upload, Image as ImageIcon,
@@ -16,6 +16,7 @@ import {
   MAP_LOCATIONS, OBJECTIVE_TYPES, ZONE_TYPES, ENEMY_TARGETS, ROTATION_TYPES, QuestZone,
 } from './types'
 import { EXTRACTS_BY_LOCATION } from './extracts'
+import { loadVanillaQuestById } from './vanillaLoader'
 import { ChildItemTree } from './ChildItemTree'
 
 // Immutably update a nested child tree inside a RewardItem.
@@ -198,6 +199,13 @@ export default function QuestsTab({ questPack, traderId, onChange, onImportFromC
   const [expandedQuest, setExpandedQuest] = useState<number | null>(null)
   const [expandedRotating, setExpandedRotating] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [externalQuestNames, setExternalQuestNames] = useState<Map<string, string>>(new Map())
+  const [draggedChainRoot, setDraggedChainRoot] = useState<number | null>(null)
+  const [dragOverChain, setDragOverChain] = useState<{ root: number; position: 'above' | 'below' } | null>(null)
+  const [treeConnections, setTreeConnections] = useState<Array<{ x1: number; y1: number; x2: number; y2: number }>>([])
+  const pointerDrag = useRef<{ sourceRoot: number; targetRoot: number | null; position: 'above' | 'below' } | null>(null)
+  const questListRef = useRef<HTMLDivElement>(null)
+  const questCardRefs = useRef(new Map<number, HTMLDivElement>())
 
   const filteredStoryQuests = searchQuery.trim()
     ? questPack.storyQuests.filter(q => {
@@ -205,6 +213,172 @@ export default function QuestsTab({ questPack, traderId, onChange, onImportFromC
         return q.id.toLowerCase().includes(sq) || (q.name || '').toLowerCase().includes(sq)
       })
     : questPack.storyQuests
+
+  useEffect(() => {
+    const internalIds = new Set(questPack.storyQuests.map(q => q.id))
+    const externalIds = [...new Set(questPack.storyQuests
+      .map(q => q.requirements.previousQuest)
+      .filter((id): id is string => !!id && !internalIds.has(id)))]
+    if (externalIds.length === 0) {
+      setExternalQuestNames(new Map())
+      return
+    }
+
+    let cancelled = false
+    Promise.all(externalIds.map(async id => ({ id, quest: await loadVanillaQuestById(id) })))
+      .then(results => {
+        if (cancelled) return
+        setExternalQuestNames(new Map(results.filter(result => result.quest).map(result => [result.id, result.quest!.name])))
+      })
+      .catch(() => {
+        if (!cancelled) setExternalQuestNames(new Map())
+      })
+
+    return () => { cancelled = true }
+  }, [questPack.storyQuests])
+
+  const matchingQuestIds = new Set(filteredStoryQuests.map(q => q.id))
+  const questIndexById = new Map(questPack.storyQuests.map((q, index) => [q.id, index]))
+  const childrenByParent = new Map<string, number[]>()
+  questPack.storyQuests.forEach((quest, index) => {
+    const parentId = quest.requirements.previousQuest
+    if (!parentId || !questIndexById.has(parentId)) return
+    const children = childrenByParent.get(parentId) || []
+    children.push(index)
+    childrenByParent.set(parentId, children)
+  })
+
+  const chainGroups: number[][] = []
+  const chainDepths = new Map<number, number>()
+  const assigned = new Set<number>()
+  const collectChain = (index: number, group: number[], visiting: Set<number>, depth: number) => {
+    if (assigned.has(index) || visiting.has(index)) return
+    assigned.add(index)
+    chainDepths.set(index, depth)
+    group.push(index)
+    visiting.add(index)
+    for (const child of childrenByParent.get(questPack.storyQuests[index].id) || []) {
+      collectChain(child, group, visiting, depth + 1)
+    }
+    visiting.delete(index)
+  }
+
+  questPack.storyQuests.forEach((quest, index) => {
+    if (!quest.requirements.previousQuest || !questIndexById.has(quest.requirements.previousQuest)) {
+      const group: number[] = []
+      collectChain(index, group, new Set(), 0)
+      if (group.length > 0) chainGroups.push(group)
+    }
+  })
+  questPack.storyQuests.forEach((_, index) => {
+    if (!assigned.has(index)) {
+      const group: number[] = []
+      collectChain(index, group, new Set(), 0)
+      if (group.length > 0) chainGroups.push(group)
+    }
+  })
+
+  const storyQuestRows = chainGroups.flatMap(group => {
+    if (searchQuery && !group.some(index => matchingQuestIds.has(questPack.storyQuests[index].id))) return []
+    return group.map(index => ({ index, depth: chainDepths.get(index) || 0, quest: questPack.storyQuests[index], chainRoot: group[0] }))
+  })
+
+  useLayoutEffect(() => {
+    const updateConnections = () => {
+      const container = questListRef.current
+      if (!container) return
+      const containerRect = container.getBoundingClientRect()
+      const visibleIndices = new Set(storyQuestRows.map(row => row.index))
+      const connections: Array<{ x1: number; y1: number; x2: number; y2: number }> = []
+
+      for (const childIndex of visibleIndices) {
+        const parentId = questPack.storyQuests[childIndex].requirements.previousQuest
+        const parentIndex = parentId ? questIndexById.get(parentId) : undefined
+        if (parentIndex === undefined || !visibleIndices.has(parentIndex)) continue
+
+        const parentCard = questCardRefs.current.get(parentIndex)
+        const childCard = questCardRefs.current.get(childIndex)
+        if (!parentCard || !childCard) continue
+
+        const parentRect = parentCard.getBoundingClientRect()
+        const childRect = childCard.getBoundingClientRect()
+        const x1 = parentRect.left - containerRect.left
+        const y1 = parentRect.top - containerRect.top + parentRect.height / 2
+        const x2 = childRect.left - containerRect.left
+        const y2 = childRect.top - containerRect.top + childRect.height / 2
+        connections.push({ x1, y1, x2, y2 })
+      }
+
+      setTreeConnections(connections)
+    }
+
+    updateConnections()
+    const observer = typeof ResizeObserver !== 'undefined' && questListRef.current
+      ? new ResizeObserver(updateConnections)
+      : null
+    if (observer && questListRef.current) observer.observe(questListRef.current)
+    window.addEventListener('resize', updateConnections)
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('resize', updateConnections)
+    }
+  }, [questPack.storyQuests, storyQuestRows.length, searchQuery])
+
+  const reorderChain = (sourceRoot: number, targetRoot: number, position: 'above' | 'below') => {
+    if (sourceRoot === targetRoot) return
+    const sourceGroup = chainGroups.find(group => group[0] === sourceRoot)
+    const targetGroup = chainGroups.find(group => group[0] === targetRoot)
+    if (!sourceGroup || !targetGroup) return
+    const reorderedGroups = chainGroups.filter(group => group[0] !== sourceRoot)
+    let targetPosition = reorderedGroups.findIndex(group => group[0] === targetRoot)
+    if (position === 'below') targetPosition++
+    reorderedGroups.splice(targetPosition, 0, sourceGroup)
+    onChange({
+      ...questPack,
+      storyQuests: reorderedGroups.flatMap(group => group.map(index => questPack.storyQuests[index])),
+    })
+  }
+
+  const beginPointerDrag = (event: React.PointerEvent<HTMLButtonElement>, chainRoot: number, isChainChild: boolean) => {
+    if (isChainChild) return
+    event.preventDefault()
+    event.stopPropagation()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    pointerDrag.current = { sourceRoot: chainRoot, targetRoot: null, position: 'above' }
+    setDraggedChainRoot(chainRoot)
+  }
+
+  const updatePointerDragTarget = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = pointerDrag.current
+    if (!drag) return
+
+    const element = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-chain-root]') as HTMLElement | null
+    const targetRoot = element ? Number(element.dataset.chainRoot) : null
+    if (targetRoot === null || targetRoot === drag.sourceRoot || Number.isNaN(targetRoot)) {
+      drag.targetRoot = null
+      setDragOverChain(null)
+      return
+    }
+
+    const rect = element.getBoundingClientRect()
+    const position = event.clientY < rect.top + rect.height / 2 ? 'above' : 'below'
+    drag.targetRoot = targetRoot
+    drag.position = position
+    setDragOverChain({ root: targetRoot, position })
+  }
+
+  const endPointerDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = pointerDrag.current
+    if (drag && drag.targetRoot !== null) {
+      reorderChain(drag.sourceRoot, drag.targetRoot, drag.position)
+    }
+    pointerDrag.current = null
+    setDraggedChainRoot(null)
+    setDragOverChain(null)
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+  }
 
   const hasQuests = questPack.storyQuests.length > 0 || questPack.rotatingQuests.length > 0
 
@@ -318,7 +492,7 @@ export default function QuestsTab({ questPack, traderId, onChange, onImportFromC
 
       {/* Story Quests Section */}
       {activeSection === 'story' && (
-        <div className="space-y-4">
+        <div className="space-y-4" id="story-quests-top">
           <div className="flex items-center justify-between">
             <p className="text-sm text-tarkov-text-dim">
               Fixed quests with specific objectives, rewards, and optional chaining.
@@ -344,6 +518,12 @@ export default function QuestsTab({ questPack, traderId, onChange, onImportFromC
             )}
           </div>
 
+          {draggedChainRoot !== null && (
+            <div className="rounded border border-tarkov-accent/40 bg-tarkov-accent/10 px-3 py-2 text-xs text-tarkov-accent">
+              Dragging a quest chain. Move over the top or bottom half of another quest, then release to insert the chain above or below it.
+            </div>
+          )}
+
           {questPack.storyQuests.length === 0 && (
             <div className="card text-center text-tarkov-text-dim py-8">
               No story quests defined. Add one to get started.
@@ -356,17 +536,52 @@ export default function QuestsTab({ questPack, traderId, onChange, onImportFromC
             </div>
           )}
 
-          <div className="space-y-2">
-            {filteredStoryQuests.map((quest, qi) => {
-              const isExpanded = expandedQuest === qi
-              const questErrors = errors.filter(e => e.field.startsWith(`quest.${qi}`))
+          <div ref={questListRef} className="relative space-y-2">
+            <svg className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-visible" aria-hidden="true">
+              {treeConnections.map((connection, index) => {
+                return (
+                  <path
+                    key={index}
+                    d={`M ${connection.x1} ${connection.y1} V ${connection.y2} H ${connection.x2}`}
+                    fill="none"
+                    stroke="rgb(212 175 55 / 0.45)"
+                    strokeWidth="2"
+                  />
+                )
+              })}
+            </svg>
+            {storyQuestRows.map(({ quest, index: questIndex, depth, chainRoot }) => {
+              const isExpanded = expandedQuest === questIndex
+              const questErrors = errors.filter(e => e.field.startsWith(`quest.${questIndex}`))
+              const isChainChild = depth > 0
 
               return (
-                <div key={quest.id} className={`card ${questErrors.length > 0 ? 'border-tarkov-error/50' : ''}`}>
+                <div
+                  key={quest.id}
+                  ref={element => {
+                    if (element) questCardRefs.current.set(questIndex, element)
+                    else questCardRefs.current.delete(questIndex)
+                  }}
+                  data-chain-root={chainRoot}
+                  style={{ marginLeft: depth > 0 ? `${depth * 24}px` : undefined }}
+                  className={`relative card transition-all duration-150 ${questErrors.length > 0 ? 'border-tarkov-error/50' : ''} ${isChainChild ? 'border-l-2 border-l-tarkov-accent/40' : ''} ${dragOverChain?.root === chainRoot && draggedChainRoot !== chainRoot ? 'border-2 border-tarkov-accent bg-tarkov-accent/10 scale-[1.01]' : ''} ${draggedChainRoot === chainRoot ? 'opacity-50' : ''}`}
+                >
                   {/* Header */}
-                  <div className="flex items-center justify-between cursor-pointer" onClick={() => setExpandedQuest(isExpanded ? null : qi)}>
+                  <div className="flex items-center justify-between cursor-pointer" onClick={() => setExpandedQuest(isExpanded ? null : questIndex)}>
                     <div className="flex items-center gap-3">
-                      <GripVertical size={14} className="text-tarkov-text-dim" />
+                      <button
+                        type="button"
+                        title={isChainChild ? 'Child quest moves with its parent chain' : 'Drag to move this quest chain'}
+                        aria-label={isChainChild ? 'Child quest moves with its parent chain' : 'Drag to move this quest chain'}
+                        className={`p-0 border-0 bg-transparent flex items-center ${isChainChild ? '' : 'cursor-grab active:cursor-grabbing'}`}
+                        onClick={e => e.stopPropagation()}
+                        onPointerDown={e => beginPointerDrag(e, chainRoot, isChainChild)}
+                        onPointerMove={updatePointerDragTarget}
+                        onPointerUp={endPointerDrag}
+                        onPointerCancel={endPointerDrag}
+                      >
+                        <GripVertical size={14} className="text-tarkov-text-dim" />
+                      </button>
                       {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       <Crosshair size={14} className="text-tarkov-accent" />
                       <span className="font-medium text-tarkov-text">
@@ -378,14 +593,19 @@ export default function QuestsTab({ questPack, traderId, onChange, onImportFromC
                       <span className="text-xs text-tarkov-text-dim font-mono">
                         {MAP_LOCATIONS.find(l => l.value === quest.location)?.label || quest.location}
                       </span>
+                      {dragOverChain?.root === chainRoot && draggedChainRoot !== chainRoot && (
+                        <span className="text-xs bg-tarkov-accent/20 text-tarkov-accent px-2 py-0.5 rounded">
+                          Drop {dragOverChain.position}
+                        </span>
+                      )}
                       {questErrors.length > 0 && <AlertCircle size={14} className="text-tarkov-error" />}
                     </div>
                     <div className="flex items-center gap-1">
-                      <button onClick={e => { e.stopPropagation(); duplicateStoryQuest(qi) }}
+                      <button onClick={e => { e.stopPropagation(); duplicateStoryQuest(questIndex) }}
                         className="text-tarkov-text-dim hover:text-tarkov-accent transition-colors p-1" title="Duplicate">
                         <Copy size={14} />
                       </button>
-                      <button onClick={e => { e.stopPropagation(); removeStoryQuest(qi) }}
+                      <button onClick={e => { e.stopPropagation(); removeStoryQuest(questIndex) }}
                         className="text-tarkov-error hover:text-tarkov-error/80 transition-colors p-1" title="Delete">
                         <Trash2 size={14} />
                       </button>
@@ -396,9 +616,10 @@ export default function QuestsTab({ questPack, traderId, onChange, onImportFromC
                   {isExpanded && (
                     <StoryQuestEditor
                       quest={quest}
-                      questIndex={qi}
+                      questIndex={questIndex}
                       allQuests={questPack.storyQuests}
-                      onChange={updates => updateStoryQuest(qi, updates)}
+                      externalQuestNames={externalQuestNames}
+                      onChange={updates => updateStoryQuest(questIndex, updates)}
                       onImportFromClipboard={onImportFromClipboard}
                       errors={questErrors}
                     />
@@ -407,6 +628,17 @@ export default function QuestsTab({ questPack, traderId, onChange, onImportFromC
               )
             })}
           </div>
+
+          {questPack.storyQuests.length > 3 && (
+            <div className="flex justify-center pt-3">
+              <button
+                onClick={() => document.getElementById('story-quests-top')?.scrollIntoView({ behavior: 'smooth' })}
+                className="btn-secondary text-sm flex items-center gap-1.5"
+              >
+                <ChevronUp size={14} /> Back to Top
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -490,10 +722,11 @@ export default function QuestsTab({ questPack, traderId, onChange, onImportFromC
 
 // ==================== Story Quest Editor ====================
 
-function StoryQuestEditor({ quest, questIndex, allQuests, onChange, onImportFromClipboard, errors }: {
+function StoryQuestEditor({ quest, questIndex, allQuests, externalQuestNames, onChange, onImportFromClipboard, errors }: {
   quest: StoryQuestDefinition
   questIndex: number
   allQuests: StoryQuestDefinition[]
+  externalQuestNames: Map<string, string>
   onChange: (updates: Partial<StoryQuestDefinition>) => void
   onImportFromClipboard: () => Promise<RewardItem | undefined>
   errors: ValidationError[]
@@ -622,7 +855,13 @@ function StoryQuestEditor({ quest, questIndex, allQuests, onChange, onImportFrom
               onChange={e => onChange({ requirements: { ...quest.requirements, previousQuest: e.target.value || undefined } })}
               placeholder="Enter a 24-char quest ID from another mod or vanilla" maxLength={24} />
           )}
+          {quest.requirements.previousQuest && externalQuestNames.get(quest.requirements.previousQuest) && (
+            <p className="text-xs text-tarkov-accent mt-1">
+              Recognized vanilla prerequisite: {externalQuestNames.get(quest.requirements.previousQuest)}
+            </p>
+          )}
         </Field>
+
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

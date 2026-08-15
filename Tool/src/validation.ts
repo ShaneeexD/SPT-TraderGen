@@ -221,7 +221,6 @@ export function validateQuestPack(pack: QuestPackDefinition, traderId: string): 
     if (q.requirements.previousQuest && !HEX_24.test(q.requirements.previousQuest)) {
       errors.push({ field: `quest.${i}.previousQuest`, message: `${prefix}: Previous quest ID must be a 24-char hex string.` })
     }
-
     for (let j = 0; j < q.objectives.length; j++) {
       const obj = q.objectives[j]
       const objPrefix = `${prefix}.Objective[${j}]`

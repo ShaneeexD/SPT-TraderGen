@@ -240,13 +240,13 @@ export default function App() {
         // Also load vanilla quests for this trader
         try {
           const questPack = await loadVanillaQuestPackByTraderId(traderId)
-          // Regenerate quest IDs so they don't collide
-          const remappedQuests = questPack.storyQuests.map(q => ({
+          // Preserve vanilla quest IDs and prerequisite references so imported quests remain
+          // compatible with the existing SPT quest graph. Only the copied trader gets a new ID.
+          const importedQuests = questPack.storyQuests.map(q => ({
             ...q,
-            id: generateMongoId(),
             traderId: newTrader.id,
           }))
-          setQuestPack({ ...questPack, storyQuests: remappedQuests })
+          setQuestPack({ ...questPack, storyQuests: importedQuests })
         } catch {
           setQuestPack(createDefaultQuestPack())
         }

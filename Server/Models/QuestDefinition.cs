@@ -157,6 +157,7 @@ public class QuestRequirements
     // ID of a quest that must be completed first. Null = no prerequisite.
     [JsonPropertyName("previousQuest")]
     public string? PreviousQuest { get; set; }
+
 }
 
 // A single quest objective the player must complete.
