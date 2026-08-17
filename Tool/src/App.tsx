@@ -1978,7 +1978,7 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
           <Package size={18} /> Assortment ({assort.length} items)
         </h2>
         <div className="flex items-center gap-3">
-          <a href="https://db.sp-tarkov.com/search" target="_blank" rel="noopener noreferrer"
+          <a href="https://db.sp-tushonka.com/search" target="_blank" rel="noopener noreferrer"
             className="btn-secondary text-sm flex items-center gap-1.5">
             <ExternalLink size={14} /> SPT Item Database
           </a>
@@ -1996,8 +1996,8 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
           <HelpCircle size={14} className="text-tarkov-accent shrink-0 mt-0.5" />
           <p>
             Need item IDs? Search for items at{' '}
-            <a href="https://db.sp-tarkov.com/search" target="_blank" rel="noopener noreferrer"
-              className="text-tarkov-accent hover:text-tarkov-accent-hover underline">db.sp-tarkov.com/search</a>
+            <a href="https://db.sp-tushonka.com/search" target="_blank" rel="noopener noreferrer"
+              className="text-tarkov-accent hover:text-tarkov-accent-hover underline">db.sp-tushonka.com/search</a>
             {' '}and copy the template ID.
           </p>
         </div>
@@ -2206,8 +2206,8 @@ function AssortTab({ assort, loyaltyLevels, defaultCurrency, storyQuests, expand
                       />
                       <p className="text-xs text-tarkov-text-dim mt-1">
                         Find IDs at{' '}
-                        <a href="https://db.sp-tarkov.com/search" target="_blank" rel="noopener noreferrer"
-                          className="text-tarkov-accent hover:text-tarkov-accent-hover underline">db.sp-tarkov.com</a>
+                        <a href="https://db.sp-tushonka.com/search" target="_blank" rel="noopener noreferrer"
+                          className="text-tarkov-accent hover:text-tarkov-accent-hover underline">db.sp-tushonka.com</a>
                       </p>
                     </Field>
 

@@ -23,6 +23,21 @@
   //   Interchange, Lighthouse, Reserve, laboratory, TarkovStreets, Sandbox
   //
   // CURRENCIES: RUB, USD, EUR
+  //
+  // HIDDEN REWARDS:
+  //   Any reward can be marked as "hidden" (the BSG "unknown" flag). Hidden rewards
+  //   show as "Unknown" in the quest UI until the quest is ready to hand in.
+  //   The reward is still given server-side — it's purely a client-side spoiler prevention.
+  //
+  //   Per-reward objects (items, skills, money): add "hidden": true
+  //     e.g. { "itemTpl": "5755356824597772cb798962", "count": 2, "hidden": true }
+  //
+  //   Scalar rewards (xp, traderStanding, stashRows, pockets):
+  //     "xpHidden": true, "traderStandingHidden": true, etc.
+  //
+  //   List rewards (recipes, unlockAssortItems):
+  //     "hiddenRecipes": [true, false]  — parallel boolean array to "recipes"
+  //     "hiddenAssortItems": [true]     — parallel boolean array to "unlockAssortItems"
 
   // Default quest icon for all quests (relative to this pack folder).
   // Individual quests can override with their own "image" field.

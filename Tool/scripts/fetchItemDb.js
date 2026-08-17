@@ -5,8 +5,8 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-const NAMES_URL = 'https://db.sp-tarkov.com/api/item/names'
-const ITEM_URL = id => `https://db.sp-tarkov.com/api/item/?id=${id}`
+const NAMES_URL = 'https://db.sp-tushonka.com/api/item/names'
+const ITEM_URL = id => `https://db.sp-tushonka.com/api/item/?id=${id}`
 
 const OUT_FILE = path.join(__dirname, '..', 'public', 'itemDb.json')
 

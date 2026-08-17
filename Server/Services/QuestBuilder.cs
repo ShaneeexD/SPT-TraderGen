@@ -962,7 +962,7 @@ public static class QuestBuilder
                 ["index"] = idx++,
                 ["type"] = "Experience",
                 ["value"] = rewards.Xp.ToString(),
-                ["unknown"] = false,
+                ["unknown"] = rewards.XpHidden ?? false,
             });
         }
 
@@ -992,7 +992,7 @@ public static class QuestBuilder
                 ["target"] = moneyItemId,
                 ["type"] = "Item",
                 ["value"] = rewards.Money.Amount.ToString(),
-                ["unknown"] = false,
+                ["unknown"] = rewards.Money.Hidden ?? false,
             });
         }
 
@@ -1029,7 +1029,7 @@ public static class QuestBuilder
                 ["target"] = itemRewardId,
                 ["type"] = "Item",
                 ["value"] = item.Count.ToString(),
-                ["unknown"] = false,
+                ["unknown"] = item.Hidden ?? false,
             });
         }
 
@@ -1044,13 +1044,17 @@ public static class QuestBuilder
                 ["target"] = traderId,
                 ["type"] = "TraderStanding",
                 ["value"] = rewards.TraderStanding.ToString("F2", CultureInfo.InvariantCulture),
-                ["unknown"] = false,
+                ["unknown"] = rewards.TraderStandingHidden ?? false,
             });
         }
 
         // Assortment unlock rewards
-        foreach (var assortItemId in rewards.UnlockAssortItems)
+        for (var assortIdx = 0; assortIdx < rewards.UnlockAssortItems.Count; assortIdx++)
         {
+            var assortItemId = rewards.UnlockAssortItems[assortIdx];
+            var assortHidden = rewards.HiddenAssortItems != null && assortIdx < rewards.HiddenAssortItems.Count
+                ? rewards.HiddenAssortItems[assortIdx]
+                : false;
             var targetItemId = GenerateId();
             result.Add(new JsonObject
             {
@@ -1071,14 +1075,18 @@ public static class QuestBuilder
                 ["target"] = targetItemId,
                 ["traderId"] = traderId,
                 ["type"] = "AssortmentUnlock",
-                ["unknown"] = false,
+                ["unknown"] = assortHidden,
             });
         }
 
         // Recipe unlock rewards
-        foreach (var recipe in rewards.Recipes)
+        for (var recipeIdx = 0; recipeIdx < rewards.Recipes.Count; recipeIdx++)
         {
+            var recipe = rewards.Recipes[recipeIdx];
             if (string.IsNullOrWhiteSpace(recipe)) continue;
+            var recipeHidden = rewards.HiddenRecipes != null && recipeIdx < rewards.HiddenRecipes.Count
+                ? rewards.HiddenRecipes[recipeIdx]
+                : false;
             var targetItemId = GenerateId();
             var scheme = schemes.GetValueOrDefault(recipe);
             var recipeItems = new JsonArray
@@ -1093,18 +1101,24 @@ public static class QuestBuilder
                     },
                 },
             };
+
+            var areaReq = scheme?.Requirements.FirstOrDefault(r =>
+                r.Type.Equals("Area", StringComparison.OrdinalIgnoreCase));
+            var loyaltyLevel = areaReq?.RequiredLevel ?? 1;
+
             result.Add(new JsonObject
             {
                 ["availableInGameEditions"] = new JsonArray(),
                 ["gameMode"] = new JsonArray { "regular", "pve" },
                 ["id"] = GenerateId(),
                 ["index"] = idx++,
+                ["isHidden"] = false,
                 ["items"] = recipeItems,
-                ["loyaltyLevel"] = 1,
+                ["loyaltyLevel"] = loyaltyLevel,
                 ["target"] = targetItemId,
                 ["traderId"] = scheme?.AreaType ?? 0,
                 ["type"] = "ProductionScheme",
-                ["unknown"] = false,
+                ["unknown"] = recipeHidden,
             });
         }
 
@@ -1118,7 +1132,7 @@ public static class QuestBuilder
                 ["index"] = idx++,
                 ["type"] = "StashRows",
                 ["value"] = rewards.StashRows.ToString(),
-                ["unknown"] = false,
+                ["unknown"] = rewards.StashRowsHidden ?? false,
             });
         }
 
@@ -1133,7 +1147,7 @@ public static class QuestBuilder
                 ["target"] = skill.Name,
                 ["type"] = "Skill",
                 ["value"] = skill.Points.ToString(),
-                ["unknown"] = false,
+                ["unknown"] = skill.Hidden ?? false,
             });
         }
 
@@ -1147,7 +1161,7 @@ public static class QuestBuilder
                 ["index"] = idx++,
                 ["target"] = rewards.Pockets,
                 ["type"] = "Pockets",
-                ["unknown"] = false,
+                ["unknown"] = rewards.PocketsHidden ?? false,
             });
         }
 

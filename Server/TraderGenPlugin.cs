@@ -183,6 +183,13 @@ public class TraderGenPlugin(
         // Inject custom production schemes into SPT's hideout database
         ProductionSchemeInjector.InjectSchemes(questPacks, hideoutTable, logger);
 
+        // Fix StringOrInt.ToString() bug that breaks ProductionScheme reward matching
+        new StringOrIntToStringPatch().Enable();
+
+        // Fix multi-scheme matching so quests unlocking multiple crafts work correctly
+        ProductionSchemeMatchPatch.SetDependencies(hideoutTable);
+        new ProductionSchemeMatchPatch().Enable();
+
         // Register custom zones from all quest packs
         await RegisterQuestZones(questPacks, modPath);
 

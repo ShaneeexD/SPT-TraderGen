@@ -276,6 +276,10 @@ public class QuestRewards
     [JsonPropertyName("xp")]
     public int Xp { get; set; } = 0;
 
+    // Hide XP reward from the player until the quest is ready to hand in.
+    [JsonPropertyName("xpHidden")]
+    public bool? XpHidden { get; set; }
+
     // Money reward. Null = no money reward.
     [JsonPropertyName("money")]
     public MoneyReward? Money { get; set; }
@@ -292,18 +296,36 @@ public class QuestRewards
     [JsonPropertyName("traderStanding")]
     public double TraderStanding { get; set; } = 0;
 
+    // Hide trader standing reward from the player until the quest is ready to hand in.
+    [JsonPropertyName("traderStandingHidden")]
+    public bool? TraderStandingHidden { get; set; }
+
     // Assort items that become unlocked after completing this quest.
     // Each entry is an assort item ID from the trader's assort list.
     [JsonPropertyName("unlockAssortItems")]
     public List<string> UnlockAssortItems { get; set; } = [];
 
+    // Parallel to unlockAssortItems: if true at index i, that assort unlock is hidden
+    // from the player until the quest is ready to hand in.
+    [JsonPropertyName("hiddenAssortItems")]
+    public List<bool>? HiddenAssortItems { get; set; }
+
     // Crafting recipe (production scheme) IDs unlocked on completion.
     [JsonPropertyName("recipes")]
     public List<string> Recipes { get; set; } = [];
 
+    // Parallel to recipes: if true at index i, that recipe unlock is hidden
+    // from the player until the quest is ready to hand in.
+    [JsonPropertyName("hiddenRecipes")]
+    public List<bool>? HiddenRecipes { get; set; }
+
     // Number of stash rows to add on completion. Requires client restart.
     [JsonPropertyName("stashRows")]
     public int StashRows { get; set; } = 0;
+
+    // Hide stash rows reward from the player until the quest is ready to hand in.
+    [JsonPropertyName("stashRowsHidden")]
+    public bool? StashRowsHidden { get; set; }
 
     // Skill point rewards on completion. Each entry gives skill points to a specific skill.
     // Use skill names like "Endurance", "Strength", "Vitality", etc.
@@ -314,6 +336,10 @@ public class QuestRewards
     // Common values: "557ffd194bdc2d3a0f6c6c84" (2x2), "627a4e6b8792715e648a5e36" (2x3).
     [JsonPropertyName("pockets")]
     public string? Pockets { get; set; }
+
+    // Hide pocket upgrade reward from the player until the quest is ready to hand in.
+    [JsonPropertyName("pocketsHidden")]
+    public bool? PocketsHidden { get; set; }
 
     // Custom pocket definition — the server will generate a template ID and inject it.
     [JsonPropertyName("customPocket")]
@@ -349,6 +375,10 @@ public class SkillReward
     // Points to add. In BSG, 100 points = +1 level. Use 100 for a full level.
     [JsonPropertyName("points")]
     public int Points { get; set; } = 100;
+
+    // Hide this skill reward from the player until the quest is ready to hand in.
+    [JsonPropertyName("hidden")]
+    public bool? Hidden { get; set; }
 }
 
 // A money reward (currency + amount).
@@ -361,6 +391,10 @@ public class MoneyReward
     // Amount of money.
     [JsonPropertyName("amount")]
     public int Amount { get; set; } = 0;
+
+    // Hide this money reward from the player until the quest is ready to hand in.
+    [JsonPropertyName("hidden")]
+    public bool? Hidden { get; set; }
 }
 
 // An item reward given on quest completion.
@@ -378,6 +412,10 @@ public class ItemReward
     // Uses the same structure as assort child items.
     [JsonPropertyName("children")]
     public List<AssortChildItem>? Children { get; set; }
+
+    // Hide this item reward from the player until the quest is ready to hand in.
+    [JsonPropertyName("hidden")]
+    public bool? Hidden { get; set; }
 }
 
 // ==================== Zone Definitions ====================

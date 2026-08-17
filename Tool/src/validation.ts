@@ -565,14 +565,19 @@ export function buildQuestExportJson(pack: QuestPackDefinition, trader?: TraderD
 
 function buildRewardsJson(rewards: QuestPackDefinition['storyQuests'][0]['rewards']) {
   const r: Record<string, unknown> = { xp: rewards.xp }
+  if (rewards.xpHidden) r.xpHidden = true
   if (rewards.money && rewards.money.amount > 0) {
-    r.money = { currency: rewards.money.currency, amount: rewards.money.amount }
+    const money: Record<string, unknown> = { currency: rewards.money.currency, amount: rewards.money.amount }
+    if (rewards.money.hidden) money.hidden = true
+    r.money = money
   }
   if (rewards.traderStanding !== 0) r.traderStanding = rewards.traderStanding
+  if (rewards.traderStandingHidden) r.traderStandingHidden = true
   if (rewards.initialEquipment && rewards.initialEquipment.length > 0) {
     r.initialEquipment = rewards.initialEquipment.map(item => {
       const out: Record<string, unknown> = { itemTpl: item.itemTpl, count: item.count }
       if (item.children && item.children.length > 0) out.children = item.children
+      if (item.hidden) out.hidden = true
       return out
     })
   }
@@ -580,18 +585,37 @@ function buildRewardsJson(rewards: QuestPackDefinition['storyQuests'][0]['reward
     r.items = rewards.items.map(item => {
       const out: Record<string, unknown> = { itemTpl: item.itemTpl, count: item.count }
       if (item.children && item.children.length > 0) out.children = item.children
+      if (item.hidden) out.hidden = true
       return out
     })
   }
   if (rewards.unlockAssortItems && rewards.unlockAssortItems.length > 0) {
     r.unlockAssortItems = rewards.unlockAssortItems
+    if (rewards.hiddenAssortItems && rewards.hiddenAssortItems.length > 0) {
+      r.hiddenAssortItems = rewards.hiddenAssortItems
+    }
   }
   if (rewards.recipes && rewards.recipes.length > 0) {
     r.recipes = rewards.recipes
+    if (rewards.hiddenRecipes && rewards.hiddenRecipes.length > 0) {
+      r.hiddenRecipes = rewards.hiddenRecipes
+    }
   }
-  if (rewards.stashRows && rewards.stashRows > 0) r.stashRows = rewards.stashRows
-  if (rewards.skills && rewards.skills.length > 0) r.skills = rewards.skills
-  if (rewards.pockets) r.pockets = rewards.pockets
+  if (rewards.stashRows && rewards.stashRows > 0) {
+    r.stashRows = rewards.stashRows
+    if (rewards.stashRowsHidden) r.stashRowsHidden = true
+  }
+  if (rewards.skills && rewards.skills.length > 0) {
+    r.skills = rewards.skills.map(s => {
+      const out: Record<string, unknown> = { name: s.name, points: s.points }
+      if (s.hidden) out.hidden = true
+      return out
+    })
+  }
+  if (rewards.pockets) {
+    r.pockets = rewards.pockets
+    if (rewards.pocketsHidden) r.pocketsHidden = true
+  }
   if (rewards.customPocket) r.customPocket = rewards.customPocket
   return r
 }

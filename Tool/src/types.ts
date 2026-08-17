@@ -164,21 +164,28 @@ export interface QuestObjective {
 
 export interface QuestRewards {
   xp: number
+  xpHidden?: boolean
   money?: MoneyReward
   traderStanding: number
+  traderStandingHidden?: boolean
   items?: RewardItem[]
   initialEquipment?: RewardItem[]
   unlockAssortItems?: string[]
+  hiddenAssortItems?: boolean[]
   recipes?: string[]
+  hiddenRecipes?: boolean[]
   stashRows?: number
+  stashRowsHidden?: boolean
   skills?: SkillReward[]
   pockets?: string
+  pocketsHidden?: boolean
   customPocket?: CustomPocketDefinition
 }
 
 export interface SkillReward {
   name: string
   points: number
+  hidden?: boolean
 }
 
 export interface CustomPocketDefinition {
@@ -193,12 +200,14 @@ export interface PocketSlot {
 export interface MoneyReward {
   currency: string
   amount: number
+  hidden?: boolean
 }
 
 export interface RewardItem {
   itemTpl: string
   count: number
   children?: AssortChildItem[]
+  hidden?: boolean
 }
 
 export interface RotatingQuestTemplate {

@@ -3,6 +3,7 @@ import {
   Plus, Trash2, ChevronDown, ChevronUp, RefreshCw, Target, Crosshair,
   Clock, MapPin, HelpCircle, AlertCircle, Upload, Image as ImageIcon,
   Scroll, Repeat, GripVertical, Copy, Package, Search, ClipboardPaste,
+  EyeOff, Eye,
 } from 'lucide-react'
 import type {
   QuestPackDefinition, StoryQuestDefinition, QuestObjective, QuestRewards, SkillReward,
@@ -105,6 +106,21 @@ const VALID_SKILLS = [
   'BearAssaultoperations', 'BearAuthority', 'BearAksystems', 'BearHeavycaliber', 'BearRawpower',
   'UsecArsystems', 'UsecDeepweaponmodding', 'UsecLongrangeoptics', 'UsecNegotiations', 'UsecTactics',
 ]
+
+// Small toggle button for the "hidden reward" (unknown) flag.
+// When hidden, the reward shows as "Unknown" in-game until the quest is ready to hand in.
+function HiddenToggle({ hidden, onChange, title }: { hidden: boolean; onChange: (v: boolean) => void; title?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!hidden)}
+      className={`p-1 rounded transition-colors ${hidden ? 'text-tarkov-accent' : 'text-tarkov-text-dim hover:text-tarkov-text'}`}
+      title={title || (hidden ? 'Hidden — shows as "Unknown" until quest is ready to hand in' : 'Visible — click to hide this reward')}
+    >
+      {hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+    </button>
+  )
+}
 
 // Returns true if an objective location matches (or is compatible with) the quest location.
 // Only the composite 'factory4' quest location covers both day and night objectives.
@@ -960,19 +976,27 @@ function StoryQuestEditor({ quest, questIndex, allQuests, externalQuestNames, on
         <div className="bg-tarkov-bg rounded-lg p-4 space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Field label="XP" tooltip="Experience points awarded on completion.">
-              <input type="number" className="input-field" value={quest.rewards.xp}
-                onChange={e => updateRewards({ xp: Number(e.target.value) })} min={0} />
+              <div className="flex items-center gap-1">
+                <input type="number" className="input-field flex-1" value={quest.rewards.xp}
+                  onChange={e => updateRewards({ xp: Number(e.target.value) })} min={0} />
+                <HiddenToggle hidden={quest.rewards.xpHidden || false}
+                  onChange={v => updateRewards({ xpHidden: v || undefined })} />
+              </div>
             </Field>
             <Field label="Money Amount" tooltip="Amount of currency given as reward.">
-              <input type="number" className="input-field" value={quest.rewards.money?.amount || 0}
-                onChange={e => updateRewards({
-                  money: { currency: quest.rewards.money?.currency || 'RUB', amount: Number(e.target.value) }
-                })} min={0} />
+              <div className="flex items-center gap-1">
+                <input type="number" className="input-field flex-1" value={quest.rewards.money?.amount || 0}
+                  onChange={e => updateRewards({
+                    money: { currency: quest.rewards.money?.currency || 'RUB', amount: Number(e.target.value), hidden: quest.rewards.money?.hidden }
+                  })} min={0} />
+                <HiddenToggle hidden={quest.rewards.money?.hidden || false}
+                  onChange={v => updateRewards({ money: { currency: quest.rewards.money?.currency || 'RUB', amount: quest.rewards.money?.amount || 0, hidden: v || undefined } })} />
+              </div>
             </Field>
             <Field label="Currency" tooltip="Which currency for the money reward.">
               <select className="input-field" value={quest.rewards.money?.currency || 'RUB'}
                 onChange={e => updateRewards({
-                  money: { amount: quest.rewards.money?.amount || 0, currency: e.target.value }
+                  money: { amount: quest.rewards.money?.amount || 0, currency: e.target.value, hidden: quest.rewards.money?.hidden }
                 })}>
                 <option value="RUB">Roubles</option>
                 <option value="USD">Dollars</option>
@@ -980,9 +1004,13 @@ function StoryQuestEditor({ quest, questIndex, allQuests, externalQuestNames, on
               </select>
             </Field>
             <Field label="Standing" tooltip="Trader reputation gained. Use small values like 0.01-0.05.">
-              <input type="number" className="input-field" value={quest.rewards.traderStanding}
-                onChange={e => updateRewards({ traderStanding: Number(e.target.value) })}
-                step={0.01} min={-1} max={1} />
+              <div className="flex items-center gap-1">
+                <input type="number" className="input-field flex-1" value={quest.rewards.traderStanding}
+                  onChange={e => updateRewards({ traderStanding: Number(e.target.value) })}
+                  step={0.01} min={-1} max={1} />
+                <HiddenToggle hidden={quest.rewards.traderStandingHidden || false}
+                  onChange={v => updateRewards({ traderStandingHidden: v || undefined })} />
+              </div>
             </Field>
           </div>
 
@@ -1045,6 +1073,12 @@ function StoryQuestEditor({ quest, questIndex, allQuests, externalQuestNames, on
                       updateRewards({ initialEquipment: items })
                     }}
                   />
+                  <HiddenToggle hidden={item.hidden || false}
+                    onChange={v => {
+                      const items = [...(quest.rewards.initialEquipment || [])]
+                      items[idx] = { ...item, hidden: v || undefined }
+                      updateRewards({ initialEquipment: items })
+                    }} />
                   <button
                     onClick={() => updateRewards({ initialEquipment: (quest.rewards.initialEquipment || []).filter((_, i) => i !== idx) })}
                     className="text-tarkov-error hover:text-tarkov-error/80 p-1"
@@ -1127,8 +1161,8 @@ function StoryQuestEditor({ quest, questIndex, allQuests, externalQuestNames, on
             </button>
             <p className="text-xs text-tarkov-text-dim">
               Find IDs at{' '}
-              <a href="https://db.sp-tarkov.com/search" target="_blank" rel="noopener noreferrer"
-                className="text-tarkov-accent hover:text-tarkov-accent-hover underline">db.sp-tarkov.com</a>
+              <a href="https://db.sp-tushonka.com/search" target="_blank" rel="noopener noreferrer"
+                className="text-tarkov-accent hover:text-tarkov-accent-hover underline">db.sp-tushonka.com</a>
             </p>
             {(quest.rewards.items || []).length > 0 && (
               <span className="text-xs text-tarkov-text-dim">{(quest.rewards.items || []).length} item(s)</span>
@@ -1176,6 +1210,12 @@ function StoryQuestEditor({ quest, questIndex, allQuests, externalQuestNames, on
                         <TooltipIcon text="Quantity of this item to be rewarded." />
                       </div>
                     </div>
+                    <HiddenToggle hidden={item.hidden || false}
+                      onChange={v => {
+                        const newItems = [...(quest.rewards.items || [])]
+                        newItems[idx] = { ...item, hidden: v || undefined }
+                        updateRewards({ items: newItems })
+                      }} />
                     <button
                       onClick={() => {
                         const newItems = (quest.rewards.items || []).filter((_, i) => i !== idx)
@@ -1272,10 +1312,18 @@ function StoryQuestEditor({ quest, questIndex, allQuests, externalQuestNames, on
                       placeholder="24-char production scheme ID"
                       maxLength={24}
                     />
+                    <HiddenToggle hidden={(quest.rewards.hiddenRecipes || [])[idx] || false}
+                      onChange={v => {
+                        const newHidden = [...(quest.rewards.hiddenRecipes || [])]
+                        while (newHidden.length < (quest.rewards.recipes || []).length) newHidden.push(false)
+                        newHidden[idx] = v
+                        updateRewards({ hiddenRecipes: newHidden.some(h => h) ? newHidden : undefined })
+                      }} />
                     <button
                       onClick={() => {
                         const newRecipes = (quest.rewards.recipes || []).filter((_, i) => i !== idx)
-                        updateRewards({ recipes: newRecipes.length ? newRecipes : undefined })
+                        const newHidden = (quest.rewards.hiddenRecipes || []).filter((_, i) => i !== idx)
+                        updateRewards({ recipes: newRecipes.length ? newRecipes : undefined, hiddenRecipes: newHidden.some(h => h) ? newHidden : undefined })
                       }}
                       className="text-tarkov-error hover:text-tarkov-error/80 p-1"
                     >
@@ -1302,6 +1350,13 @@ function StoryQuestEditor({ quest, questIndex, allQuests, externalQuestNames, on
                     {itemNames.get(tpl) && (
                       <span className="text-xs text-tarkov-accent truncate max-w-[200px]">{itemNames.get(tpl)}</span>
                     )}
+                    <HiddenToggle hidden={(quest.rewards.hiddenAssortItems || [])[idx] || false}
+                      onChange={v => {
+                        const newHidden = [...(quest.rewards.hiddenAssortItems || [])]
+                        while (newHidden.length < (quest.rewards.unlockAssortItems || []).length) newHidden.push(false)
+                        newHidden[idx] = v
+                        updateRewards({ hiddenAssortItems: newHidden.some(h => h) ? newHidden : undefined })
+                      }} />
                   </div>
                 ))}
               </div>
@@ -1313,31 +1368,39 @@ function StoryQuestEditor({ quest, questIndex, allQuests, externalQuestNames, on
           {/* Stash Rows */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-tarkov-border/30">
             <Field label="Stash Rows" tooltip="Number of stash rows to add on completion. Requires client restart.">
-              <input type="number" className="input-field" value={quest.rewards.stashRows || 0}
-                onChange={e => updateRewards({ stashRows: Number(e.target.value) || undefined })} min={0} />
+              <div className="flex items-center gap-1">
+                <input type="number" className="input-field flex-1" value={quest.rewards.stashRows || 0}
+                  onChange={e => updateRewards({ stashRows: Number(e.target.value) || undefined })} min={0} />
+                <HiddenToggle hidden={quest.rewards.stashRowsHidden || false}
+                  onChange={v => updateRewards({ stashRowsHidden: v || undefined })} />
+              </div>
             </Field>
             <Field label="Pockets" tooltip="Pocket template to upgrade to. Requires client restart.">
               <div className="flex flex-col gap-1.5">
-                <select
-                  className="input-field text-sm"
-                  value={quest.rewards.pockets ? (KNOWN_POCKETS.some(p => p.id === quest.rewards.pockets) ? quest.rewards.pockets : '') : (quest.rewards.customPocket ? '__custom__' : '')}
-                  onChange={e => {
-                    const val = e.target.value
-                    if (val === '__custom__') {
-                      updateRewards({ pockets: undefined, customPocket: { slots: [{ width: 1, height: 2 }] } })
-                    } else if (val === '') {
-                      updateRewards({ pockets: undefined, customPocket: undefined })
-                    } else {
-                      updateRewards({ pockets: val, customPocket: undefined })
-                    }
-                  }}
-                >
-                  <option value="">No pocket upgrade</option>
-                  {KNOWN_POCKETS.map(p => (
-                    <option key={p.id} value={p.id}>{p.label}</option>
-                  ))}
-                  <option value="__custom__">Custom...</option>
-                </select>
+                <div className="flex items-center gap-1">
+                  <select
+                    className="input-field text-sm flex-1"
+                    value={quest.rewards.pockets ? (KNOWN_POCKETS.some(p => p.id === quest.rewards.pockets) ? quest.rewards.pockets : '') : (quest.rewards.customPocket ? '__custom__' : '')}
+                    onChange={e => {
+                      const val = e.target.value
+                      if (val === '__custom__') {
+                        updateRewards({ pockets: undefined, customPocket: { slots: [{ width: 1, height: 2 }] } })
+                      } else if (val === '') {
+                        updateRewards({ pockets: undefined, customPocket: undefined })
+                      } else {
+                        updateRewards({ pockets: val, customPocket: undefined })
+                      }
+                    }}
+                  >
+                    <option value="">No pocket upgrade</option>
+                    {KNOWN_POCKETS.map(p => (
+                      <option key={p.id} value={p.id}>{p.label}</option>
+                    ))}
+                    <option value="__custom__">Custom...</option>
+                  </select>
+                  <HiddenToggle hidden={quest.rewards.pocketsHidden || false}
+                    onChange={v => updateRewards({ pocketsHidden: v || undefined })} />
+                </div>
 
                 {/* Custom pocket editor */}
                 {quest.rewards.customPocket && (
@@ -1392,6 +1455,12 @@ function StoryQuestEditor({ quest, questIndex, allQuests, externalQuestNames, on
                         }}
                       />
                     </div>
+                    <HiddenToggle hidden={skill.hidden || false}
+                      onChange={v => {
+                        const newSkills = [...(quest.rewards.skills || [])]
+                        newSkills[idx] = { ...skill, hidden: v || undefined }
+                        updateRewards({ skills: newSkills })
+                      }} />
                     <button
                       onClick={() => {
                         const newSkills = (quest.rewards.skills || []).filter((_, i) => i !== idx)
@@ -1487,13 +1556,13 @@ function ObjectiveEditor({ objective, onChange }: {
         )}
 
         {(isHandover || isFindItem || isLeaveItemAtLocation) && (
-          <Field label="Item Template ID" tooltip={isFindItem ? "The 24-char hex ID of the item to find." : isLeaveItemAtLocation ? "The 24-char hex ID of the item to leave at the location." : "The 24-char hex ID of the item to hand over. Find IDs at db.sp-tarkov.com/search"}>
+          <Field label="Item Template ID" tooltip={isFindItem ? "The 24-char hex ID of the item to find." : isLeaveItemAtLocation ? "The 24-char hex ID of the item to leave at the location." : "The 24-char hex ID of the item to hand over. Find IDs at db.sp-tushonka.com/search"}>
             <input className="input-field text-sm font-mono" value={objective.itemTpl || ''}
               onChange={e => onChange({ itemTpl: e.target.value })} placeholder="24-char hex" maxLength={24} />
             <p className="text-xs text-tarkov-text-dim mt-1">
               Find IDs at{' '}
-              <a href="https://db.sp-tarkov.com/search" target="_blank" rel="noopener noreferrer"
-                className="text-tarkov-accent hover:text-tarkov-accent-hover underline">db.sp-tarkov.com</a>
+              <a href="https://db.sp-tushonka.com/search" target="_blank" rel="noopener noreferrer"
+                className="text-tarkov-accent hover:text-tarkov-accent-hover underline">db.sp-tushonka.com</a>
             </p>
           </Field>
         )}
@@ -1690,7 +1759,7 @@ function AdvancedConditions({ objective, onChange }: {
           {isKill && (
             <StringListField
               label="Weapon Template IDs"
-              tooltip="24-char hex IDs of weapons that must be used for the kill. Find IDs at db.sp-tarkov.com."
+              tooltip="24-char hex IDs of weapons that must be used for the kill. Find IDs at db.sp-tushonka.com."
               items={objective.weaponTpls || []}
               placeholder="24-char hex weapon ID"
               onAdd={v => addToList('weaponTpls', v)}
@@ -2041,7 +2110,7 @@ function RotatingTemplateEditor({ template, onChange, errors }: {
 
               {/* Per-objective item pool for handover types */}
               {(obj.type === 'handover_item' || obj.type === 'handover_fir_item') && (
-                <Field label="Item Pool (template IDs, one per line)" tooltip="24-char hex item template IDs. A random item is picked for each generated quest. Find IDs at db.sp-tarkov.com/search">
+                <Field label="Item Pool (template IDs, one per line)" tooltip="24-char hex item template IDs. A random item is picked for each generated quest. Find IDs at db.sp-tushonka.com/search">
                   <textarea className="input-field min-h-[40px] resize-y text-xs font-mono" value={obj.itemPool.join('\n')}
                     onChange={e => updateObjective(oi, { itemPool: e.target.value.split('\n').filter(s => s.trim()) })}
                     placeholder="5449016a4bdc2d6f028b456f" />
@@ -2057,8 +2126,8 @@ function RotatingTemplateEditor({ template, onChange, errors }: {
                   )}
                   <p className="text-xs text-tarkov-text-dim mt-1">
                     Find item IDs at{' '}
-                    <a href="https://db.sp-tarkov.com/search" target="_blank" rel="noopener noreferrer"
-                      className="text-tarkov-accent hover:text-tarkov-accent-hover underline">db.sp-tarkov.com</a>
+                    <a href="https://db.sp-tushonka.com/search" target="_blank" rel="noopener noreferrer"
+                      className="text-tarkov-accent hover:text-tarkov-accent-hover underline">db.sp-tushonka.com</a>
                   </p>
                 </Field>
               )}
