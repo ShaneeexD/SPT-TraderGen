@@ -21,6 +21,12 @@ public static class QuestBuilder
     // Locale entries that need item names resolved after custom item mods have loaded.
     public static readonly List<LocaleFixupEntry> LocaleFixups = new();
 
+    // Pool registry: maps reward ID -> pool entries for random item pool rewards.
+    // Populated during BuildRewards, consumed by RandomItemPoolPatch at quest completion.
+    // Key = the "id" field of the generated Reward object (a MongoId string).
+    // Value = the list of pool entries to roll from.
+    public static readonly Dictionary<string, List<RandomItemPoolEntry>> RandomPoolRegistry = new();
+
     // Build quest files for a trader.
     public static int BuildQuestFiles(
         string traderId,
@@ -1030,6 +1036,46 @@ public static class QuestBuilder
                 ["type"] = "Item",
                 ["value"] = item.Count.ToString(),
                 ["unknown"] = item.Hidden ?? false,
+            });
+        }
+
+        // Random item pool rewards
+        foreach (var pool in rewards.RandomItemPools)
+        {
+            if (pool.Entries.Count == 0) continue;
+
+            var poolRewardId = GenerateId();
+            var rewardId = GenerateId(); // unique ID for this reward — used to look up the pool
+            var placeholderItemId = GenerateId();
+
+            // Build the placeholder reward item using the "Random Item" template
+            var rewardItems = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["_id"] = placeholderItemId,
+                    ["_tpl"] = RandomItemPlaceholder.PlaceholderTplId,
+                    ["upd"] = new JsonObject
+                    {
+                        ["StackObjectsCount"] = 1,
+                    },
+                },
+            };
+
+            // Register the pool in the static registry so RandomItemPoolPatch can find it
+            RandomPoolRegistry[rewardId] = pool.Entries;
+
+            result.Add(new JsonObject
+            {
+                ["availableInGameEditions"] = new JsonArray(),
+                ["findInRaid"] = true,
+                ["id"] = rewardId,
+                ["index"] = idx++,
+                ["items"] = rewardItems,
+                ["target"] = placeholderItemId,
+                ["type"] = "Item",
+                ["value"] = "1",
+                ["unknown"] = false, // Show "Random Item" with custom icon at all times
             });
         }
 

@@ -14,6 +14,7 @@ using SPTarkov.Server.Core.Models.Spt.Tables;
 using SPTarkov.Server.Core.Utils.Json;
 using SPTarkov.Server.Core.Routers;
 using SPTarkov.Server.Core.Services;
+using SPTarkov.Server.Core.Services.Modding.Custom;
 using SPTarkov.Server.Core.Utils;
 using TraderGen.Generators;
 using TraderGen.Models;
@@ -55,7 +56,8 @@ public class TraderGenPlugin(
     WTTServerCommonLib.WTTServerCommonLib wttCommon,
     ProfileHelper profileHelper,
     TraderHelper traderHelper,
-    TimeUtil timeUtil
+    TimeUtil timeUtil,
+    CustomItemService customItemService
 ) : IOnLoad
 {
     public async Task OnLoadAsync(CancellationToken cancellationToken)
@@ -101,6 +103,9 @@ public class TraderGenPlugin(
             failCount > 0 ? LogColor.Yellow : LogColor.Green
         );
         logger.LogWithColor("[TraderGen] ====================================", LogColor.Cyan);
+
+        // Register the "Random Item" placeholder for random item pool rewards
+        RandomItemPlaceholder.TryRegister(customItemService, templateTable, logger);
 
         // Load and register quests
         await LoadAndRegisterQuests(loadedTraders);
@@ -202,6 +207,9 @@ public class TraderGenPlugin(
         // Ensure traders exist in a profile before SPT unlocks them via TraderUnlock quest rewards.
         TraderUnlockEnsureInProfilePatch.SetDependencies(traderHelper, profileHelper);
         new TraderUnlockEnsureInProfilePatch().Enable();
+
+        // Enable random item pool reward rolling at quest completion
+        new RandomItemPoolPatch().Enable();
 
         if (totalStoryQuests > 0)
         {

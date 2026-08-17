@@ -46,6 +46,14 @@
       <HintPath>$(SPTPath)\EscapeFromTarkov_Data\Managed\UnityEngine.UI.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>$(SPTPath)\EscapeFromTarkov_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(SPTPath)\EscapeFromTarkov_Data\Managed\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>$(SPTPath)\EscapeFromTarkov_Data\Managed\Newtonsoft.Json.dll</HintPath>
       <Private>false</Private>
@@ -68,6 +76,7 @@
     </PropertyGroup>
     <MakeDir Directories="$(ClientPluginDir)" />
     <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(ClientPluginDir)" OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)..\Server\Assets\randomitem.png" DestinationFolder="$(ClientPluginDir)" OverwriteReadOnlyFiles="true" Condition="Exists('$(MSBuildThisFileDirectory)..\Server\Assets\randomitem.png')" />
     <Message Text="[TraderGen] Client deployed to $(ClientPluginDir)" Importance="high" />
   </Target>
 </Project>

@@ -180,6 +180,18 @@ export interface QuestRewards {
   pockets?: string
   pocketsHidden?: boolean
   customPocket?: CustomPocketDefinition
+  randomItemPools?: RandomItemPool[]
+}
+
+export interface RandomItemPool {
+  entries: RandomItemPoolEntry[]
+}
+
+export interface RandomItemPoolEntry {
+  itemTpl: string
+  count: number
+  weight: number
+  children?: AssortChildItem[]
 }
 
 export interface SkillReward {

@@ -344,6 +344,42 @@ public class QuestRewards
     // Custom pocket definition — the server will generate a template ID and inject it.
     [JsonPropertyName("customPocket")]
     public CustomPocketDefinition? CustomPocket { get; set; }
+
+    // Random item pool rewards. Each pool is a set of weighted items from which
+    // one entry is randomly selected when the quest is completed. The reward is
+    // shown as "Random Item" (with a custom icon) while the quest is in progress,
+    // and the actual item is rolled and granted on completion.
+    [JsonPropertyName("randomItemPools")]
+    public List<RandomItemPool> RandomItemPools { get; set; } = [];
+}
+
+// A random item pool — a set of weighted entries from which one is chosen at quest completion.
+public class RandomItemPool
+{
+    // The pool entries. One entry is selected at random based on weights.
+    [JsonPropertyName("entries")]
+    public List<RandomItemPoolEntry> Entries { get; set; } = [];
+}
+
+// A single entry in a random item pool.
+public class RandomItemPoolEntry
+{
+    // Item template ID (24-char hex).
+    [JsonPropertyName("itemTpl")]
+    public string ItemTpl { get; set; } = string.Empty;
+
+    // How many of this item to give if selected.
+    [JsonPropertyName("count")]
+    public int Count { get; set; } = 1;
+
+    // Weight for random selection. Higher = more likely. Default 1.
+    [JsonPropertyName("weight")]
+    public int Weight { get; set; } = 1;
+
+    // Child items attached to this entry (e.g. weapon attachments, armour plates).
+    // Uses the same structure as assort child items.
+    [JsonPropertyName("children")]
+    public List<AssortChildItem>? Children { get; set; }
 }
 
 // Custom pocket slot definition.

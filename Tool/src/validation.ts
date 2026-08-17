@@ -617,5 +617,14 @@ function buildRewardsJson(rewards: QuestPackDefinition['storyQuests'][0]['reward
     if (rewards.pocketsHidden) r.pocketsHidden = true
   }
   if (rewards.customPocket) r.customPocket = rewards.customPocket
+  if (rewards.randomItemPools && rewards.randomItemPools.length > 0) {
+    r.randomItemPools = rewards.randomItemPools.map(pool => ({
+      entries: pool.entries.map(e => {
+        const out: Record<string, unknown> = { itemTpl: e.itemTpl, count: e.count, weight: e.weight }
+        if (e.children && e.children.length > 0) out.children = e.children
+        return out
+      }),
+    }))
+  }
   return r
 }

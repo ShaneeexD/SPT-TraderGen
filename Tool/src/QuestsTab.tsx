@@ -9,6 +9,7 @@ import type {
   QuestPackDefinition, StoryQuestDefinition, QuestObjective, QuestRewards, SkillReward,
   CustomPocketDefinition, PocketSlot, RewardItem, AssortChildItem,
   RotatingQuestTemplate, RotatingObjectiveTemplate, ValidationError,
+  RandomItemPool, RandomItemPoolEntry,
 } from './types'
 import { useItemNames } from './useItemNames'
 import {
@@ -20,12 +21,12 @@ import { EXTRACTS_BY_LOCATION } from './extracts'
 import { loadVanillaQuestById } from './vanillaLoader'
 import { ChildItemTree } from './ChildItemTree'
 
-// Immutably update a nested child tree inside a RewardItem.
-function produceRewardChildUpdate(
-  item: RewardItem,
+// Immutably update a nested child tree inside a RewardItem or RandomItemPoolEntry.
+function produceRewardChildUpdate<T extends { children?: AssortChildItem[] }>(
+  item: T,
   path: number[],
   updater: (node: AssortChildItem) => AssortChildItem
-): RewardItem {
+): T {
   if (path.length === 0) return item
   const newChildren = [...(item.children || [])]
   let current: AssortChildItem[] = newChildren
@@ -754,9 +755,10 @@ function StoryQuestEditor({ quest, questIndex, allQuests, externalQuestNames, on
       ...quest.objectives.map(o => o.itemTpl).filter(Boolean),
       ...(quest.rewards.items || []).map(i => i.itemTpl).filter(Boolean),
       ...(quest.rewards.initialEquipment || []).map(i => i.itemTpl).filter(Boolean),
+      ...(quest.rewards.randomItemPools || []).flatMap(p => p.entries.map(e => e.itemTpl)).filter(Boolean),
       ...(quest.rewards.unlockAssortItems || [])
     ] as string[],
-    [quest.objectives.map(o => o.itemTpl).join(','), quest.rewards.items?.map(i => i.itemTpl).join(','), quest.rewards.initialEquipment?.map(i => i.itemTpl).join(','), quest.rewards.unlockAssortItems?.join(',')]
+    [quest.objectives.map(o => o.itemTpl).join(','), quest.rewards.items?.map(i => i.itemTpl).join(','), quest.rewards.initialEquipment?.map(i => i.itemTpl).join(','), quest.rewards.randomItemPools?.flatMap(p => p.entries.map(e => e.itemTpl)).join(','), quest.rewards.unlockAssortItems?.join(',')]
   )
   const itemNames = useItemNames(itemTpls)
 
@@ -1281,6 +1283,210 @@ function StoryQuestEditor({ quest, questIndex, allQuests, externalQuestNames, on
               ))}
             </div>
           )}
+
+          {/* Random Item Pool Rewards */}
+          <div className="pt-2 border-t border-tarkov-border/30">
+            <div className="flex items-center gap-3 flex-wrap mb-2">
+              <button
+                onClick={() => {
+                  const newPools = [...(quest.rewards.randomItemPools || []), { entries: [{ itemTpl: '', count: 1, weight: 1 }] }]
+                  updateRewards({ randomItemPools: newPools })
+                }}
+                className="btn-secondary text-xs flex items-center gap-1 px-2 py-1"
+              >
+                <RefreshCw size={12} /> Add Random Pool
+              </button>
+              <span className="text-xs text-tarkov-text-dim">
+                Weighted random item rewards — one entry is chosen at quest completion.
+              </span>
+              <p className="basis-full text-xs text-red-500">
+                Random Item Pools require TraderGen 2.4.0 or later (SPT 4.1.x).
+              </p>
+              {(quest.rewards.randomItemPools || []).length > 0 && (
+                <span className="text-xs text-tarkov-text-dim">{(quest.rewards.randomItemPools || []).length} pool(s)</span>
+              )}
+            </div>
+
+            {(quest.rewards.randomItemPools || []).map((pool, poolIdx) => (
+              <div key={poolIdx} className="mt-2 bg-tarkov-bg rounded p-2 border border-tarkov-border/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-semibold text-tarkov-accent">Pool {poolIdx + 1}</span>
+                  <span className="text-xs text-tarkov-text-dim">
+                    ({pool.entries.length} entr{pool.entries.length === 1 ? 'y' : 'ies'})
+                  </span>
+                  <button
+                    onClick={() => {
+                      const newPools = (quest.rewards.randomItemPools || []).filter((_, i) => i !== poolIdx)
+                      updateRewards({ randomItemPools: newPools })
+                    }}
+                    className="text-tarkov-error hover:text-tarkov-error/80 p-0.5 ml-auto"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {pool.entries.map((entry, entryIdx) => (
+                    <div key={entryIdx} className="bg-tarkov-bg-light rounded p-2 border border-tarkov-border/30">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0 max-w-[240px]">
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              className="input-field text-xs font-mono w-full py-1"
+                              value={entry.itemTpl}
+                              onChange={e => {
+                                const newPools = [...(quest.rewards.randomItemPools || [])]
+                                newPools[poolIdx] = {
+                                  ...pool,
+                                  entries: pool.entries.map((en, j) => j === entryIdx ? { ...en, itemTpl: e.target.value } : en),
+                                }
+                                updateRewards({ randomItemPools: newPools })
+                              }}
+                              placeholder="Item TPL ID"
+                              maxLength={24}
+                            />
+                          </div>
+                          {itemNames[entry.itemTpl] && (
+                            <p className="text-xs text-tarkov-text-dim mt-0.5 truncate">{itemNames[entry.itemTpl]}</p>
+                          )}
+                        </div>
+                        <div className="w-16">
+                          <label className="text-xs text-tarkov-text-dim block text-center">Count</label>
+                          <input
+                            type="number"
+                            min="1"
+                            className="input-field text-xs w-full text-center py-1"
+                            value={entry.count}
+                            onChange={e => {
+                              const newPools = [...(quest.rewards.randomItemPools || [])]
+                              newPools[poolIdx] = {
+                                ...pool,
+                                entries: pool.entries.map((en, j) => j === entryIdx ? { ...en, count: parseInt(e.target.value) || 1 } : en),
+                              }
+                              updateRewards({ randomItemPools: newPools })
+                            }}
+                          />
+                        </div>
+                        <div className="w-16">
+                          <label className="text-xs text-tarkov-text-dim block text-center">Weight</label>
+                          <input
+                            type="number"
+                            min="1"
+                            className="input-field text-xs w-full text-center py-1"
+                            value={entry.weight}
+                            onChange={e => {
+                              const newPools = [...(quest.rewards.randomItemPools || [])]
+                              newPools[poolIdx] = {
+                                ...pool,
+                                entries: pool.entries.map((en, j) => j === entryIdx ? { ...en, weight: parseInt(e.target.value) || 1 } : en),
+                              }
+                              updateRewards({ randomItemPools: newPools })
+                            }}
+                          />
+                        </div>
+                        <button
+                          onClick={() => {
+                            const newPools = [...(quest.rewards.randomItemPools || [])]
+                            newPools[poolIdx] = {
+                              ...pool,
+                              entries: pool.entries.filter((_, j) => j !== entryIdx),
+                            }
+                            updateRewards({ randomItemPools: newPools })
+                          }}
+                          className="text-tarkov-error hover:text-tarkov-error/80 p-1 mt-1"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+
+                      {/* Child items tree */}
+                      <div className="mt-2 pt-2 border-t border-tarkov-border/30">
+                        <CollapsibleChildItemTree
+                          children={entry.children || []}
+                          path={[]}
+                          onAdd={(path) => {
+                            const newPools = [...(quest.rewards.randomItemPools || [])]
+                            const target = newPools[poolIdx].entries[entryIdx]
+                            if (path.length === 0) {
+                              newPools[poolIdx].entries[entryIdx] = { ...target, children: [...(target.children || []), createDefaultAssortChild()] }
+                            } else {
+                              newPools[poolIdx].entries[entryIdx] = produceRewardChildUpdate(target, path, node => ({
+                                ...node,
+                                children: [...(node.children || []), createDefaultAssortChild()],
+                              }))
+                            }
+                            updateRewards({ randomItemPools: newPools })
+                          }}
+                          onRemove={(path) => {
+                            const newPools = [...(quest.rewards.randomItemPools || [])]
+                            const target = newPools[poolIdx].entries[entryIdx]
+                            if (path.length === 1) {
+                              newPools[poolIdx].entries[entryIdx] = { ...target, children: (target.children || []).filter((_, j) => j !== path[0]) }
+                            } else {
+                              const parentPath = path.slice(0, -1)
+                              newPools[poolIdx].entries[entryIdx] = produceRewardChildUpdate(target, parentPath, node => ({
+                                ...node,
+                                children: (node.children || []).filter((_, j) => j !== path[path.length - 1]),
+                              }))
+                            }
+                            updateRewards({ randomItemPools: newPools })
+                          }}
+                          onUpdate={(path, key, value) => {
+                            const newPools = [...(quest.rewards.randomItemPools || [])]
+                            const target = newPools[poolIdx].entries[entryIdx]
+                            if (path.length === 1) {
+                              newPools[poolIdx].entries[entryIdx] = {
+                                ...target,
+                                children: (target.children || []).map((c, j) =>
+                                  j === path[0] ? { ...c, [key]: value } : c
+                                ),
+                              }
+                            } else {
+                              newPools[poolIdx].entries[entryIdx] = produceRewardChildUpdate(target, path, node => ({ ...node, [key]: value }))
+                            }
+                            updateRewards({ randomItemPools: newPools })
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const newPools = [...(quest.rewards.randomItemPools || [])]
+                      newPools[poolIdx] = {
+                        ...pool,
+                        entries: [...pool.entries, { itemTpl: '', count: 1, weight: 1 }],
+                      }
+                      updateRewards({ randomItemPools: newPools })
+                    }}
+                    className="btn-secondary text-xs flex items-center gap-1 px-2 py-1"
+                  >
+                    <Plus size={12} /> Add Entry
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const imported = await onImportFromClipboard()
+                      if (imported) {
+                        const newPools = [...(quest.rewards.randomItemPools || [])]
+                        newPools[poolIdx] = {
+                          ...pool,
+                          entries: [...pool.entries, { itemTpl: imported.itemTpl, count: imported.count || 1, weight: 1, children: imported.children }],
+                        }
+                        updateRewards({ randomItemPools: newPools })
+                      }
+                    }}
+                    className="btn-secondary text-xs flex items-center gap-1 px-2 py-1"
+                  >
+                    <ClipboardPaste size={12} /> Import from TraderGen
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
 
           {/* Recipe Unlocks */}
           <div className="pt-2 border-t border-tarkov-border/30">

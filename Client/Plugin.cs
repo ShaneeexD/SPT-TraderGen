@@ -27,6 +27,7 @@ namespace TraderGen.Client
                 QuestPocketRewardPatch.Init(Logger);
                 CustomPocketTemplatePatch.Init(Logger);
                 TraderSettingsPatch.Init(Logger);
+                RandomItemIconPatch.Init(Logger);
                 var harmony = new Harmony("com.tradergen.client");
                 harmony.PatchAll();
                 CustomPocketTemplatePatch.Apply(harmony);
